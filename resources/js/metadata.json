@@ -1,0 +1,5 @@
+{
+  "name": "Odani Factory Manager",
+  "description": "A comprehensive management system for Odani manufacturing, including purchase entry, work orders, worker management, and printable reports.",
+  "requestFramePermissions": []
+}

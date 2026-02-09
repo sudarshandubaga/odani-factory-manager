@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOY_PATH=/home/thexpert/textile.thedemoonline.site
+    - /bin/cp -R * $DEPLOY_PATH
