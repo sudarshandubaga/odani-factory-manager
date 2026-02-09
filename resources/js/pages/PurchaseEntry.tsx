@@ -12,7 +12,7 @@ import {
     Eye,
     X,
 } from "lucide-react";
-import { List, RowComponentProps } from "react-window";
+
 import { SearchableSelect } from "../components/SearchableSelect";
 import { NewSupplierModal } from "../components/NewSupplierModal";
 
@@ -225,66 +225,55 @@ export const PurchaseEntry: React.FC = () => {
                         </div>
                     </div>
                     {purchases.length > 0 ? (
-                        <List
-                            rowCount={purchases.length}
-                            rowHeight={60}
-                            style={{ height: 440, width: "100%" }}
-                            rowComponent={({
-                                index,
-                                style,
-                            }: RowComponentProps) => {
-                                const p = purchases[index];
-                                if (!p) return null;
-                                return (
-                                    <div
-                                        style={style}
-                                        className="grid grid-cols-5 border-b border-gray-200 items-center hover:bg-gray-50"
-                                    >
-                                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {p.date}
-                                        </div>
-                                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {p.invoice_no}
-                                        </div>
-                                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {p.supplier?.name || "Unknown"}
-                                        </div>
-                                        <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {p.items_count}
-                                        </div>
-                                        <div className="px-6 py-4 whitespace-nowrap flex justify-end gap-2 text-end text-sm font-medium">
-                                            <button
-                                                onClick={() =>
-                                                    setSelectedPurchaseDetails(
-                                                        p,
-                                                    )
-                                                }
-                                                className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
-                                                title="View Details"
-                                            >
-                                                <Eye className="w-4 h-4" />{" "}
-                                                Details
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    const url = `#/purchase/${p.id}/print`;
-                                                    window.open(
-                                                        url,
-                                                        "PrintWindow",
-                                                        "width=900,height=800,scrollbars=yes",
-                                                    );
-                                                }}
-                                                className="text-brand-600 hover:text-brand-900 flex items-center justify-end gap-1"
-                                            >
-                                                <Printer className="w-4 h-4" />{" "}
-                                                Print
-                                            </button>
-                                        </div>
+                        <div
+                            className="overflow-y-auto"
+                            style={{ height: 440 }}
+                        >
+                            {purchases.map((p) => (
+                                <div
+                                    key={p.id}
+                                    className="grid grid-cols-5 border-b border-gray-200 items-center hover:bg-gray-50"
+                                >
+                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {p.date}
                                     </div>
-                                );
-                            }}
-                            rowProps={{}}
-                        />
+                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {p.invoice_no}
+                                    </div>
+                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {p.supplier?.name || "Unknown"}
+                                    </div>
+                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {p.items_count}
+                                    </div>
+                                    <div className="px-6 py-4 whitespace-nowrap flex justify-end gap-2 text-end text-sm font-medium">
+                                        <button
+                                            onClick={() =>
+                                                setSelectedPurchaseDetails(p)
+                                            }
+                                            className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                                            title="View Details"
+                                        >
+                                            <Eye className="w-4 h-4" /> Details
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const url = `#/purchase/${p.id}/print`;
+                                                window.open(
+                                                    url,
+                                                    "PrintWindow",
+                                                    "width=900,height=800,scrollbars=yes",
+                                                );
+                                            }}
+                                            className="text-brand-600 hover:text-brand-900 flex items-center justify-end gap-1"
+                                        >
+                                            <Printer className="w-4 h-4" />{" "}
+                                            Print
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     ) : (
                         <div className="px-6 py-4 text-center text-gray-500">
                             No records found
@@ -629,68 +618,55 @@ export const PurchaseEntry: React.FC = () => {
                         <div className="col-span-1">Action</div>
                     </div>
                     <div className="h-[400px]">
-                        <List
-                            rowCount={items.length}
-                            rowHeight={50}
-                            style={{ height: 400, width: "100%" }}
-                            rowComponent={({
-                                index,
-                                style,
-                            }: RowComponentProps) => {
-                                const item = items[index];
-                                if (!item) return null;
-                                return (
-                                    <div
-                                        style={style}
-                                        className="grid grid-cols-7 p-2 border-b items-center text-sm hover:bg-gray-50 bg-white"
-                                    >
-                                        <div className="col-span-1 text-gray-500 pl-2">
-                                            {item.sNo}
-                                        </div>
-                                        <div className="col-span-1">
-                                            <input
-                                                type="number"
-                                                className="w-24 border rounded px-2 py-1 focus:ring-1 focus:ring-brand-500 outline-none"
-                                                value={item.sizeMeters || ""}
-                                                onChange={(e) =>
-                                                    handleItemChange(
-                                                        item.id,
-                                                        "sizeMeters",
-                                                        parseFloat(
-                                                            e.target.value,
-                                                        ),
-                                                    )
-                                                }
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                        <div className="col-span-1 text-gray-600">
-                                            {item.patRaw.toFixed(2)}
-                                        </div>
-                                        <div className="col-span-1 font-medium">
-                                            {item.patRound}
-                                        </div>
-                                        <div className="col-span-1 text-gray-600">
-                                            {item.piecesRaw}
-                                        </div>
-                                        <div className="col-span-1 font-bold text-brand-700">
-                                            {item.piecesRound}
-                                        </div>
-                                        <div className="col-span-1">
-                                            <button
-                                                onClick={() =>
-                                                    removeItemRow(item.id)
-                                                }
-                                                className="text-red-500 hover:text-red-700"
-                                            >
-                                                <Trash className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                        <div className="max-h-[400px] overflow-y-auto">
+                            {items.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="grid grid-cols-7 p-2 border-b items-center text-sm hover:bg-gray-50 bg-white"
+                                >
+                                    <div className="col-span-1 text-gray-500 pl-2">
+                                        {item.sNo}
                                     </div>
-                                );
-                            }}
-                            rowProps={{}}
-                        />
+                                    <div className="col-span-1">
+                                        <input
+                                            type="number"
+                                            className="w-24 border rounded px-2 py-1 focus:ring-1 focus:ring-brand-500 outline-none"
+                                            value={item.sizeMeters || ""}
+                                            onChange={(e) =>
+                                                handleItemChange(
+                                                    item.id,
+                                                    "sizeMeters",
+                                                    parseFloat(e.target.value),
+                                                )
+                                            }
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="col-span-1 text-gray-600">
+                                        {item.patRaw.toFixed(2)}
+                                    </div>
+                                    <div className="col-span-1 font-medium">
+                                        {item.patRound}
+                                    </div>
+                                    <div className="col-span-1 text-gray-600">
+                                        {item.piecesRaw}
+                                    </div>
+                                    <div className="col-span-1 font-bold text-brand-700">
+                                        {item.piecesRound}
+                                    </div>
+                                    <div className="col-span-1">
+                                        <button
+                                            onClick={() =>
+                                                removeItemRow(item.id)
+                                            }
+                                            className="text-red-500 hover:text-red-700"
+                                        >
+                                            <Trash className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
