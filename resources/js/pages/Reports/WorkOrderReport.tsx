@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { storage } from "../services/storage";
-import { COMPANY_NAME } from "../constants";
-import { WorkOrder, Purchase, Worker, WorkType } from "../types";
+import { storage } from "../../services/storage";
+import { COMPANY_NAME } from "../../constants";
+import { WorkOrder, Purchase, Worker, WorkType } from "../../types";
 
 export const WorkOrderReport: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -10,6 +10,7 @@ export const WorkOrderReport: React.FC = () => {
     const [purchase, setPurchase] = useState<Purchase | null>(null);
     const [worker, setWorker] = useState<Worker | null>(null);
     const [workType, setWorkType] = useState<WorkType | null>(null);
+    const [allWorkTypes, setAllWorkTypes] = useState<WorkType[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -25,6 +26,7 @@ export const WorkOrderReport: React.FC = () => {
                         storage.getWorkers(),
                         storage.getWorkTypes(),
                     ]);
+                    setAllWorkTypes(types);
                     setPurchase(
                         purchases.find((p) => p.id == foundOrder.purchase_id) ||
                             null,
@@ -33,10 +35,10 @@ export const WorkOrderReport: React.FC = () => {
                         workers.find((w) => w.id == foundOrder.worker_id) ||
                             null,
                     );
-                    setWorkType(
+                    const wt =
                         types.find((wt) => wt.id == foundOrder.work_type_id) ||
-                            null,
-                    );
+                        null;
+                    setWorkType(wt);
                 }
             } catch (error) {
                 console.error("Error fetching report data", error);
@@ -46,6 +48,12 @@ export const WorkOrderReport: React.FC = () => {
         };
         fetchData();
     }, [id]);
+
+    const getFullWorkName = () => {
+        if (!workType) return "Unknown";
+        const parent = allWorkTypes.find((t) => t.id === workType.parent_id);
+        return parent ? `${parent.name} > ${workType.name}` : workType.name;
+    };
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
     if (!order || !purchase)
@@ -78,7 +86,7 @@ export const WorkOrderReport: React.FC = () => {
                     </p>
                     <p>
                         <span className="font-bold">Work Type:</span>{" "}
-                        {workType?.name}
+                        {getFullWorkName()}
                     </p>
                 </div>
                 <div className="text-right">

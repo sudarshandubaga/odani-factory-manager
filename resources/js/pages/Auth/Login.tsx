@@ -6,9 +6,11 @@ import {
     loginStart,
     loginSuccess,
     loginFailure,
-} from "../store/slices/authSlice";
-import { RootState } from "../store";
-import api from "../services/api";
+} from "../../store/slices/authSlice";
+import { RootState } from "../../store";
+import api from "../../services/api";
+
+import { toast } from "react-hot-toast";
 
 export const Login: React.FC = () => {
     const [email, setEmail] = useState("");
@@ -30,23 +32,25 @@ export const Login: React.FC = () => {
                 password,
             });
             dispatch(loginSuccess(response.data));
+            toast.success("Login successful!");
             navigate("/");
         } catch (err: any) {
             dispatch(
                 loginFailure(err.response?.data?.message || "Login failed"),
             );
+            toast.error(err.response?.data?.message || "Login failed");
         }
     };
 
     const handleForgot = (e: React.FormEvent) => {
         e.preventDefault();
-        alert("Reset link sent to registered email.");
+        toast.success("Reset link sent to registered email.");
         setMode("login");
     };
 
     const handleChangePassword = (e: React.FormEvent) => {
         e.preventDefault();
-        alert("Password changed successfully.");
+        toast.success("Password changed successfully.");
         setMode("login");
     };
 

@@ -9,13 +9,14 @@ class WorkTypeController extends Controller
 {
     public function index(Request $request)
     {
-        return $request->user()->tenant->workTypes;
+        return $request->user()->tenant->workTypes()->with('parent')->get();
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string',
+            'parent_id' => 'nullable|exists:work_types,id',
         ]);
 
         return $request->user()->tenant->workTypes()->create($validated);
@@ -23,7 +24,7 @@ class WorkTypeController extends Controller
 
     public function show(Request $request, string $id)
     {
-        return $request->user()->tenant->workTypes()->findOrFail($id);
+        return $request->user()->tenant->workTypes()->with('parent')->findOrFail($id);
     }
 
     public function update(Request $request, string $id)
@@ -31,10 +32,11 @@ class WorkTypeController extends Controller
         $workType = $request->user()->tenant->workTypes()->findOrFail($id);
         $validated = $request->validate([
             'name' => 'required|string',
+            'parent_id' => 'nullable|exists:work_types,id',
         ]);
 
         $workType->update($validated);
-        return $workType;
+        return $workType->load('parent');
     }
 
     public function destroy(Request $request, string $id)

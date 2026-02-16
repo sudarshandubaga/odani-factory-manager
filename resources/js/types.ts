@@ -56,12 +56,16 @@ export interface Worker {
 export interface WorkType {
     id: string;
     name: string;
+    parent_id?: string | null;
+    parent?: WorkType;
 }
 
 export interface WorkOrder {
     id: string;
-    purchase_id: string;
+    purchase_id?: string | null;
     purchase?: Purchase;
+    parent_order_id?: string | null;
+    parentOrder?: WorkOrder;
     worker_id: string;
     worker?: Worker;
     work_type_id: string;
@@ -71,9 +75,22 @@ export interface WorkOrder {
     deadline: string;
     status: "active" | "completed";
     created_at: string;
+    childOrders?: WorkOrder[];
+}
+
+export interface Tenant {
+    id: string;
+    name: string;
+    domain: string;
+    expires_at: string;
 }
 
 export interface User {
-    username: string;
+    id: string;
+    name: string;
+    email: string;
+    username?: string;
     role: "admin";
+    profile_photo?: string;
+    tenant?: Tenant;
 }

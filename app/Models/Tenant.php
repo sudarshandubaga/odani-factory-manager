@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Tenant extends Model
 {
-    protected $fillable = ['name', 'domain'];
+    protected $fillable = ['name', 'domain', 'expires_at'];
+
+    protected $casts = [
+        'expires_at' => 'datetime',
+    ];
 
     public function users()
     {

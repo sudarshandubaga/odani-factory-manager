@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { storage } from "../services/storage";
-import { WorkOrder, Purchase, Worker, WorkType } from "../types";
-import { COMPANY_NAME } from "../constants";
+import { storage } from "../../services/storage";
+import { WorkOrder, Purchase, Worker, WorkType } from "../../types";
+import { COMPANY_NAME } from "../../constants";
 
 export const OverdueWorkOrdersReport: React.FC = () => {
     const [orders, setOrders] = useState<WorkOrder[]>([]);

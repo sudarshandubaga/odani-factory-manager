@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { storage } from "../services/storage";
-import { COMPANY_NAME, COMPANY_ADDRESS, TERMS } from "../constants";
-import { Purchase, Supplier } from "../types";
+import { storage } from "../../services/storage";
+import { COMPANY_NAME, COMPANY_ADDRESS, TERMS } from "../../constants";
+import { Purchase, Supplier } from "../../types";
 
 export const PurchaseReport: React.FC = () => {
     const { id } = useParams<{ id: string }>();

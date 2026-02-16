@@ -9,12 +9,15 @@ use App\Http\Controllers\Api\WorkerController;
 use App\Http\Controllers\Api\WorkTypeController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\WorkOrderController;
+use App\Http\Controllers\Api\ProfileController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);
 
     Route::apiResource('suppliers', SupplierController::class);
     Route::apiResource('workers', WorkerController::class);

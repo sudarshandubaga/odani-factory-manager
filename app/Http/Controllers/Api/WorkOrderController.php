@@ -9,22 +9,35 @@ class WorkOrderController extends Controller
 {
     public function index(Request $request)
     {
-        return $request->user()->tenant->workOrders()->with(['purchase', 'worker', 'workType', 'items'])->latest()->get();
+        return $request->user()->tenant->workOrders()
+            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'childOrders'])
+            ->latest()
+            ->get();
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'purchase_id' => 'required|exists:purchases,id',
-            'worker_id' => 'required|exists:workers,id',
             'work_type_id' => 'required|exists:work_types,id',
+            'purchase_id' => 'required_without:parent_order_id|nullable|exists:purchases,id',
+            'parent_order_id' => 'required_without:purchase_id|nullable|exists:work_orders,id',
+            'worker_id' => 'required|exists:workers,id',
             'item_ids' => 'required|array',
             'item_ids.*' => 'required|exists:purchase_items,id',
             'deadline' => 'required|date',
         ]);
 
+        $purchaseId = $validated['purchase_id'] ?? null;
+
+        // If parent_order_id is provided, inherit purchase_id from it
+        if (!empty($validated['parent_order_id'])) {
+            $parentOrder = \App\Models\WorkOrder::findOrFail($validated['parent_order_id']);
+            $purchaseId = $parentOrder->purchase_id;
+        }
+
         $workOrder = $request->user()->tenant->workOrders()->create([
-            'purchase_id' => $validated['purchase_id'],
+            'purchase_id' => $purchaseId,
+            'parent_order_id' => $validated['parent_order_id'] ?? null,
             'worker_id' => $validated['worker_id'],
             'work_type_id' => $validated['work_type_id'],
             'deadline' => $validated['deadline'],
@@ -33,20 +46,32 @@ class WorkOrderController extends Controller
 
         $workOrder->items()->attach($validated['item_ids']);
 
-        // Update items status
+        // Update items status - Note: This might be tricky if one item is in multiple work orders 
+        // but typically an item progresses from one work order to next.
+        // For now keep the logic as is.
         \App\Models\PurchaseItem::whereIn('id', $validated['item_ids'])->update(['status' => 'assigned']);
 
-        return $workOrder->load(['purchase', 'worker', 'workType', 'items']);
+        return $workOrder->load(['purchase', 'worker', 'workType', 'items', 'parentOrder']);
     }
 
     public function show(Request $request, string $id)
     {
-        return $request->user()->tenant->workOrders()->with(['purchase', 'worker', 'workType', 'items'])->findOrFail($id);
+        return $request->user()->tenant->workOrders()
+            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder'])
+            ->findOrFail($id);
     }
 
     public function update(Request $request, string $id)
     {
         $workOrder = $request->user()->tenant->workOrders()->findOrFail($id);
+
+        // Check if child jobs exist
+        if ($workOrder->childOrders()->exists()) {
+            return response()->json([
+                'message' => 'Cannot change status of a job that has child job orders.'
+            ], 422);
+        }
+
         $validated = $request->validate([
             'status' => 'required|in:active,completed',
         ]);
