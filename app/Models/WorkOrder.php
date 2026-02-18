@@ -14,7 +14,20 @@ class WorkOrder extends Model
         'work_type_id',
         'deadline',
         'status',
+        'image',
     ];
+
+    protected $appends = ['image_url'];
+
+    public function getImageUrlAttribute()
+    {
+        if (!$this->image)
+            return null;
+        if (strpos($this->image, 'http') === 0 || strpos($this->image, 'data:') === 0) {
+            return $this->image;
+        }
+        return asset($this->image);
+    }
 
     public function tenant()
     {

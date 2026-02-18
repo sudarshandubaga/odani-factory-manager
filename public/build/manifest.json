@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-BMwpP-vl.css",
+    "file": "assets/app-Cr-Z1nY-.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,12 +9,12 @@
     ]
   },
   "resources/js/index.tsx": {
-    "file": "assets/index-DBgyJIm2.js",
+    "file": "assets/index-Dxh66-jM.js",
     "name": "index",
     "src": "resources/js/index.tsx",
     "isEntry": true,
     "css": [
-      "assets/app-BMwpP-vl.css"
+      "assets/app-Cr-Z1nY-.css"
     ]
   }
 }

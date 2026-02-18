@@ -71,8 +71,8 @@ export const WorkOrderReport: React.FC = () => {
                     <p className="text-sm text-gray-600">Internal Job Sheet</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8 mb-6 text-sm">
-                    <div>
+                <div className="grid grid-cols-3 gap-8 mb-6 text-sm">
+                    <div className="col-span-1">
                         <p>
                             <span className="font-bold">Order ID:</span>{" "}
                             {String(order.id).slice(-6).toUpperCase()}
@@ -90,7 +90,20 @@ export const WorkOrderReport: React.FC = () => {
                             {getFullWorkName()}
                         </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-center col-span-1 border-x border-gray-100 px-4">
+                        {order.image_url || order.image ? (
+                            <img
+                                src={order.image_url || order.image || ""}
+                                alt="Work Reference"
+                                className="max-h-32 mx-auto rounded border border-black shadow-sm"
+                            />
+                        ) : (
+                            <div className="h-32 flex items-center justify-center text-gray-300 italic text-xs border border-dashed border-gray-200 rounded">
+                                No Image Provided
+                            </div>
+                        )}
+                    </div>
+                    <div className="text-right col-span-1">
                         <p>
                             <span className="font-bold">Worker:</span>{" "}
                             {worker?.name}

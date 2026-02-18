@@ -30,6 +30,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
     const [selParentOrderId, setSelParentOrderId] = useState("");
     const [selWorkerId, setSelWorkerId] = useState("");
     const [deadline, setDeadline] = useState("");
+    const [image, setImage] = useState<string | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
     const [availableItems, setAvailableItems] = useState<SavedPurchaseItem[]>(
@@ -91,6 +92,17 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
         allWorkOrders,
     ]);
 
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const toggleItem = (id: string) => {
         const newSet = new Set(selectedItems);
         if (newSet.has(id)) newSet.delete(id);
@@ -121,6 +133,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
             worker_id: selWorkerId,
             deadline,
             item_ids: Array.from(selectedItems),
+            image,
         };
 
         if (selectedWorkType?.parent_id) {
@@ -277,6 +290,53 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                                 onChange={(e) => setDeadline(e.target.value)}
                             />
                         </div>
+
+                        {/* Image Upload */}
+                        <div className="col-span-1 md:col-span-2">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
+                                5. Reference Image (Optional)
+                            </label>
+                            <div className="flex items-start gap-4">
+                                <div className="flex-1">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        PNG, JPG, GIF up to 5MB
+                                    </p>
+                                </div>
+                                {image && (
+                                    <div className="relative h-20 w-20 border rounded-lg overflow-hidden bg-gray-50">
+                                        <img
+                                            src={image}
+                                            alt="Preview"
+                                            className="h-full w-full object-cover"
+                                        />
+                                        <button
+                                            onClick={() => setImage(null)}
+                                            className="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-1 hover:bg-red-600 transition-colors"
+                                        >
+                                            <svg
+                                                className="w-3 h-3"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                ></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Item Selection */}
@@ -284,7 +344,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                         <div className="border rounded-xl p-6 bg-gray-50 shadow-inner">
                             <div className="flex justify-between items-center mb-4">
                                 <label className="text-sm font-bold text-gray-700 uppercase tracking-widest">
-                                    5. Select Items to Assign
+                                    6. Select Items to Assign
                                 </label>
                                 <button
                                     onClick={handleSelectAll}

@@ -100,33 +100,48 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                 {...props}
                 className="p-4 border-b border-gray-200 hover:bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white"
             >
-                <div>
-                    <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg text-gray-900">
-                            {getWorkName(order.work_type_id)}
-                        </span>
-                        <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === "active" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}
-                        >
-                            {order.status.toUpperCase()}
-                        </span>
-                        {order.status === "active" &&
-                            order.deadline < today && (
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                    OVERDUE
-                                </span>
-                            )}
+                <div className="flex items-start gap-4 flex-1">
+                    <div className="flex-shrink-0">
+                        {order.image_url || order.image ? (
+                            <img
+                                src={order.image_url || order.image || ""}
+                                alt="Job"
+                                className="w-16 h-16 object-cover rounded-md border border-gray-200"
+                            />
+                        ) : (
+                            <div className="w-16 h-16 bg-gray-50 border border-dashed border-gray-200 rounded-md flex items-center justify-center text-gray-300">
+                                <Plus className="w-6 h-6" />
+                            </div>
+                        )}
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
-                        Worker:{" "}
-                        <span className="font-medium text-gray-700">
-                            {getWorkerName(order.worker_id)}
-                        </span>{" "}
-                        | Source: {getPurchaseInfo(order.purchase_id)} | Items:{" "}
-                        {order.items?.length || 0}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                        Deadline: {order.deadline}
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="font-bold text-lg text-gray-900">
+                                {getWorkName(order.work_type_id)}
+                            </span>
+                            <span
+                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === "active" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}
+                            >
+                                {order.status.toUpperCase()}
+                            </span>
+                            {order.status === "active" &&
+                                order.deadline < today && (
+                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                        OVERDUE
+                                    </span>
+                                )}
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                            Worker:{" "}
+                            <span className="font-medium text-gray-700">
+                                {getWorkerName(order.worker_id)}
+                            </span>{" "}
+                            | Source: {getPurchaseInfo(order.purchase_id)} |
+                            Items: {order.items?.length || 0}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                            Deadline: {order.deadline}
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">

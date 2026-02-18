@@ -73,6 +73,8 @@ export interface WorkOrder {
     item_ids?: string[]; // Used when creating
     items?: SavedPurchaseItem[]; // Returned from backend
     deadline: string;
+    image?: string | null;
+    image_url?: string | null;
     status: "active" | "completed";
     created_at: string;
     childOrders?: WorkOrder[];

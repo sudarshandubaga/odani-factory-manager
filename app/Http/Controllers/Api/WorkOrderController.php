@@ -25,14 +25,36 @@ class WorkOrderController extends Controller
             'item_ids' => 'required|array',
             'item_ids.*' => 'required|exists:purchase_items,id',
             'deadline' => 'required|date',
+            'image' => 'nullable|string',
         ]);
 
         $purchaseId = $validated['purchase_id'] ?? null;
-
-        // If parent_order_id is provided, inherit purchase_id from it
         if (!empty($validated['parent_order_id'])) {
             $parentOrder = \App\Models\WorkOrder::findOrFail($validated['parent_order_id']);
             $purchaseId = $parentOrder->purchase_id;
+        }
+
+        $imagePath = null;
+        if (!empty($validated['image'])) {
+            $imageData = $validated['image'];
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $type)) {
+                $imageData = substr($imageData, strpos($imageData, ',') + 1);
+                $type = strtolower($type[1]); // jpg, png, gif
+
+                if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
+                    throw new \Exception('invalid image type');
+                }
+                $imageData = base64_decode($imageData);
+
+                if ($imageData === false) {
+                    throw new \Exception('base64_decode failed');
+                }
+
+                $fileName = 'wo_' . time() . '_' . uniqid() . '.' . $type;
+                $imagePath = 'work-orders/' . $fileName;
+                \Illuminate\Support\Facades\Storage::disk('public')->put($imagePath, $imageData);
+                $imagePath = 'storage/' . $imagePath;
+            }
         }
 
         $workOrder = $request->user()->tenant->workOrders()->create([
@@ -41,6 +63,7 @@ class WorkOrderController extends Controller
             'worker_id' => $validated['worker_id'],
             'work_type_id' => $validated['work_type_id'],
             'deadline' => $validated['deadline'],
+            'image' => $imagePath,
             'status' => 'active',
         ]);
 
