@@ -62,112 +62,167 @@ export const WorkOrderReport: React.FC = () => {
     const assignedItems = order.items || [];
 
     return (
-        <div className="min-h-screen bg-white text-black p-8 max-w-[210mm] mx-auto">
-            <div className="text-center border-b-2 border-black pb-4 mb-6">
-                <h1 className="text-2xl font-bold uppercase">
-                    {COMPANY_NAME} - Work Order
-                </h1>
-                <p className="text-sm text-gray-600">Internal Job Sheet</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-8 mb-6 text-sm">
-                <div>
-                    <p>
-                        <span className="font-bold">Order ID:</span>{" "}
-                        {String(order.id).slice(-6).toUpperCase()}
-                    </p>
-                    <p>
-                        <span className="font-bold">Assigned Date:</span>{" "}
-                        {new Date(order.created_at).toLocaleDateString()}
-                    </p>
-                    <p>
-                        <span className="font-bold">Deadline:</span>{" "}
-                        {order.deadline}
-                    </p>
-                    <p>
-                        <span className="font-bold">Work Type:</span>{" "}
-                        {getFullWorkName()}
-                    </p>
+        <div className="min-h-screen bg-white text-black max-w-[210mm] mx-auto p-4 print:p-0">
+            <div className="border-2 border-black p-8 my-4 print:my-0">
+                <div className="text-center border-b-2 border-black pb-4 mb-6">
+                    <h1 className="text-2xl font-bold uppercase">
+                        {COMPANY_NAME} - Work Order
+                    </h1>
+                    <p className="text-sm text-gray-600">Internal Job Sheet</p>
                 </div>
-                <div className="text-right">
-                    <p>
-                        <span className="font-bold">Worker:</span>{" "}
-                        {worker?.name}
-                    </p>
-                    <p>
-                        <span className="font-bold">Mobile:</span>{" "}
-                        {worker?.mobile}
-                    </p>
-                    <p>
-                        <span className="font-bold">Source Invoice:</span>{" "}
-                        {purchase.invoice_no}
-                    </p>
-                </div>
-            </div>
 
-            <div className="mb-8">
-                <h3 className="font-bold text-lg mb-2">Assigned Items List</h3>
-                <table className="w-full border-collapse border border-black text-sm">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border border-black px-2 py-1 w-16">
-                                Sr. No.
-                            </th>
-                            <th className="border border-black px-2 py-1">
-                                Size (Meters)
-                            </th>
-                            <th className="border border-black px-2 py-1">
-                                Pieces
-                            </th>
-                            <th className="border border-black px-2 py-1 w-32">
-                                Worker Status
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {assignedItems.map((item, idx) => (
-                            <tr key={item.id}>
-                                <td className="border border-black px-2 py-1 text-center">
-                                    {item.s_no}
+                <div className="grid grid-cols-2 gap-8 mb-6 text-sm">
+                    <div>
+                        <p>
+                            <span className="font-bold">Order ID:</span>{" "}
+                            {String(order.id).slice(-6).toUpperCase()}
+                        </p>
+                        <p>
+                            <span className="font-bold">Assigned Date:</span>{" "}
+                            {new Date(order.created_at).toLocaleDateString()}
+                        </p>
+                        <p>
+                            <span className="font-bold">Deadline:</span>{" "}
+                            {order.deadline}
+                        </p>
+                        <p>
+                            <span className="font-bold">Work Type:</span>{" "}
+                            {getFullWorkName()}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <p>
+                            <span className="font-bold">Worker:</span>{" "}
+                            {worker?.name}
+                        </p>
+                        <p>
+                            <span className="font-bold">Mobile:</span>{" "}
+                            {worker?.mobile}
+                        </p>
+                        <p>
+                            <span className="font-bold">Source Invoice:</span>{" "}
+                            {purchase.invoice_no}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mb-8">
+                    <h3 className="font-bold text-lg mb-2">
+                        Assigned Items List
+                    </h3>
+                    <table className="w-full border-collapse border border-black text-sm">
+                        <thead>
+                            <tr className="bg-gray-100">
+                                <th className="border border-black px-2 py-1 w-16">
+                                    Sr. No.
+                                </th>
+                                {!workType?.parent_id ? (
+                                    <>
+                                        <th className="border border-black px-2 py-1">
+                                            Pat Size
+                                        </th>
+                                        <th className="border border-black px-2 py-1">
+                                            Pat
+                                        </th>
+                                        <th className="border border-black px-2 py-1">
+                                            Final
+                                        </th>
+                                    </>
+                                ) : (
+                                    <>
+                                        <th className="border border-black px-2 py-1">
+                                            Work Order No.
+                                        </th>
+                                        <th className="border border-black px-2 py-1">
+                                            No. of pieces
+                                        </th>
+                                    </>
+                                )}
+                                <th className="border border-black px-2 py-1 w-32">
+                                    Worker Status
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {assignedItems.map((item, idx) => (
+                                <tr key={item.id}>
+                                    <td className="border border-black px-2 py-1 text-center">
+                                        {idx + 1}
+                                    </td>
+                                    {!workType?.parent_id ? (
+                                        <>
+                                            <td className="border border-black px-2 py-1 text-center font-mono">
+                                                {item.size_meters} m
+                                            </td>
+                                            <td className="border border-black px-2 py-1 text-center">
+                                                {item.pat_round}
+                                            </td>
+                                            <td className="border border-black px-2 py-1 text-center font-bold">
+                                                {item.pieces_round}
+                                            </td>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <td className="border border-black px-2 py-1 text-center font-mono">
+                                                {String(order.id)
+                                                    .slice(-6)
+                                                    .toUpperCase()}
+                                            </td>
+                                            <td className="border border-black px-2 py-1 text-center font-bold">
+                                                {item.pieces_round}
+                                            </td>
+                                        </>
+                                    )}
+                                    <td className="border border-black px-2 py-1"></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="bg-gray-100 font-bold">
+                                <td
+                                    className="border border-black px-2 py-1 text-center"
+                                    colSpan={2}
+                                >
+                                    Total
                                 </td>
-                                <td className="border border-black px-2 py-1 text-center">
-                                    {item.size_meters}
-                                </td>
-                                <td className="border border-black px-2 py-1 text-center font-bold">
-                                    {item.pieces_round}
-                                </td>
+                                {!workType?.parent_id ? (
+                                    <>
+                                        <td className="border border-black px-2 py-1 text-center">
+                                            {assignedItems.reduce(
+                                                (s, i) => s + i.pat_round,
+                                                0,
+                                            )}
+                                        </td>
+                                        <td className="border border-black px-2 py-1 text-center">
+                                            {assignedItems.reduce(
+                                                (s, i) => s + i.pieces_round,
+                                                0,
+                                            )}
+                                        </td>
+                                    </>
+                                ) : (
+                                    <td className="border border-black px-2 py-1 text-center">
+                                        {assignedItems.reduce(
+                                            (s, i) => s + i.pieces_round,
+                                            0,
+                                        )}
+                                    </td>
+                                )}
                                 <td className="border border-black px-2 py-1"></td>
                             </tr>
-                        ))}
-                    </tbody>
-                    <tfoot>
-                        <tr className="bg-gray-100 font-bold">
-                            <td
-                                className="border border-black px-2 py-1 text-center"
-                                colSpan={2}
-                            >
-                                Total
-                            </td>
-                            <td className="border border-black px-2 py-1 text-center">
-                                {assignedItems.reduce(
-                                    (s, i) => s + i.pieces_round,
-                                    0,
-                                )}
-                            </td>
-                            <td className="border border-black px-2 py-1"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <div className="mt-12 flex justify-between items-end">
-                <div className="text-center">
-                    <div className="border-b border-black w-32 mb-1"></div>
-                    <p className="text-xs">Manager Sign</p>
+                        </tfoot>
+                    </table>
                 </div>
-                <div className="text-center">
-                    <div className="border-b border-black w-32 mb-1"></div>
-                    <p className="text-xs">Worker Sign</p>
+
+                <div className="mt-12 flex justify-between items-end">
+                    <div className="text-center">
+                        <div className="border-b border-black w-32 mb-1"></div>
+                        <p className="text-xs">Manager Sign</p>
+                    </div>
+                    <div className="text-center">
+                        <div className="border-b border-black w-32 mb-1"></div>
+                        <p className="text-xs">Worker Sign</p>
+                    </div>
                 </div>
             </div>
 
