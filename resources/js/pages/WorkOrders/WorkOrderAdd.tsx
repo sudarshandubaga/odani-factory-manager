@@ -13,11 +13,13 @@ import { toast } from "react-hot-toast";
 interface WorkOrderAddProps {
     onCancel: () => void;
     onSuccess: () => void;
+    defaultWorkTypeId?: string;
 }
 
 export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
     onCancel,
     onSuccess,
+    defaultWorkTypeId,
 }) => {
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [workers, setWorkers] = useState<Worker[]>([]);
@@ -30,7 +32,10 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
     const [selParentOrderId, setSelParentOrderId] = useState("");
     const [selWorkerId, setSelWorkerId] = useState("");
     const [deadline, setDeadline] = useState("");
-    const [image, setImage] = useState<string | null>(null);
+    const [image, setImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [noOfPieces, setNoOfPieces] = useState<string>("");
+    const [remarks, setRemarks] = useState<string>("");
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
     const [availableItems, setAvailableItems] = useState<SavedPurchaseItem[]>(
@@ -51,6 +56,10 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
             setWorkers(w);
             setWorkTypes(wt);
             setAllWorkOrders(wo);
+            // Auto-select the work type from nav context
+            if (defaultWorkTypeId) {
+                setSelWorkTypeId(defaultWorkTypeId);
+            }
         };
         fetchData();
     }, []);
@@ -61,6 +70,8 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
         setSelParentOrderId("");
         setSelWorkerId("");
         setDeadline("");
+        setNoOfPieces("");
+        setRemarks("");
         setSelectedItems(new Set());
         setAvailableItems([]);
     }, [selWorkTypeId]);
@@ -95,9 +106,10 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            setImage(file);
             const reader = new FileReader();
             reader.onloadend = () => {
-                setImage(reader.result as string);
+                setImagePreview(reader.result as string);
             };
             reader.readAsDataURL(file);
         }
@@ -117,33 +129,36 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
     };
 
     const handleSubmit = async () => {
-        if (
-            !selWorkTypeId ||
-            (!selPurchaseId && !selParentOrderId) ||
-            !selWorkerId ||
-            !deadline ||
-            selectedItems.size === 0
-        ) {
-            toast.error("Please fill all fields and select at least one item.");
+        if (!selWorkTypeId || !selWorkerId || !deadline) {
+            toast.error("Please fill Work Type, Worker, and Due Date.");
             return;
         }
 
-        const wo: any = {
-            work_type_id: selWorkTypeId,
-            worker_id: selWorkerId,
-            deadline,
-            item_ids: Array.from(selectedItems),
-            image,
-        };
+        const formData = new FormData();
+        formData.append("work_type_id", selWorkTypeId);
+        formData.append("worker_id", selWorkerId);
+        formData.append("deadline", deadline);
+        if (noOfPieces) formData.append("no_of_pieces", noOfPieces);
+        if (remarks) formData.append("remarks", remarks);
+        if (image) formData.append("image", image);
 
+        // Source: purchase or parent order (optional)
         if (selectedWorkType?.parent_id) {
-            wo.parent_order_id = selParentOrderId;
+            if (selParentOrderId)
+                formData.append("parent_order_id", selParentOrderId);
         } else {
-            wo.purchase_id = selPurchaseId;
+            if (selPurchaseId) formData.append("purchase_id", selPurchaseId);
+        }
+
+        // Items (optional)
+        if (selectedItems.size > 0) {
+            Array.from(selectedItems).forEach((id) =>
+                formData.append("item_ids[]", id),
+            );
         }
 
         try {
-            await storage.addWorkOrder(wo);
+            await storage.addWorkOrder(formData);
             toast.success("Job order created successfully!");
             onSuccess();
         } catch (error: any) {
@@ -167,10 +182,10 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                 Create Work Order
             </h3>
 
-            {/* Always show Work Type first */}
-            <div className="mb-8">
+            {/* 1. Work Type */}
+            <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
-                    1. Select Work Type
+                    1. Work Type
                 </label>
                 <select
                     className="block w-full border-gray-300 rounded-lg shadow-sm border p-3 bg-gray-50 focus:ring-brand-500 focus:border-brand-500 transition-all font-medium"
@@ -196,69 +211,73 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
 
             {/* Conditional Fields based on Work Type Selection */}
             {selWorkTypeId && (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Source Selection */}
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* 2. Purchase ID — always visible, optional */}
                         <div className="col-span-1">
-                            {selectedWorkType && !selectedWorkType.parent_id ? (
-                                <>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
-                                        2. Source Purchase
-                                    </label>
-                                    <select
-                                        className="block w-full border-gray-300 rounded-lg shadow-sm border p-3 focus:ring-brand-500 focus:border-brand-500"
-                                        value={selPurchaseId}
-                                        onChange={(e) =>
-                                            setSelPurchaseId(e.target.value)
-                                        }
-                                    >
-                                        <option value="">
-                                            Select Purchase...
-                                        </option>
-                                        {purchases.map((p) => (
-                                            <option key={p.id} value={p.id}>
-                                                Invoice #{p.invoice_no} (
-                                                {p.date})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </>
-                            ) : (
-                                <>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
-                                        2. Parent Work Order
-                                    </label>
-                                    <select
-                                        className="block w-full border-gray-300 rounded-lg shadow-sm border p-3 focus:ring-brand-500 focus:border-brand-500"
-                                        value={selParentOrderId}
-                                        onChange={(e) =>
-                                            setSelParentOrderId(e.target.value)
-                                        }
-                                    >
-                                        <option value="">
-                                            Select Parent Job...
-                                        </option>
-                                        {eligibleParentOrders.map((o) => (
-                                            <option key={o.id} value={o.id}>
-                                                Job #
-                                                {String(o.id)
-                                                    .slice(-6)
-                                                    .toUpperCase()}{" "}
-                                                ({o.created_at.split("T")[0]})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {eligibleParentOrders.length === 0 && (
-                                        <p className="mt-1 text-xs text-red-500 italic">
-                                            No active parent work orders found
-                                            for this type.
-                                        </p>
-                                    )}
-                                </>
-                            )}
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
+                                2. Khilai ID{" "}
+                                <span className="text-gray-400 font-normal normal-case">
+                                    (Optional)
+                                </span>
+                            </label>
+                            <select
+                                className="block w-full border-gray-300 rounded-lg shadow-sm border p-3 focus:ring-brand-500 focus:border-brand-500"
+                                value={selPurchaseId}
+                                onChange={(e) =>
+                                    setSelPurchaseId(e.target.value)
+                                }
+                            >
+                                <option value="">
+                                    Select Khilai (Optional)...
+                                </option>
+                                {purchases.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        Invoice #{p.invoice_no} ({p.date})
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
-                        {/* Worker Selection */}
+                        {/* 2b. Parent Work Order — only for child work types */}
+                        {selectedWorkType?.parent_id && (
+                            <div className="col-span-1">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
+                                    Parent Work Order{" "}
+                                    <span className="text-gray-400 font-normal normal-case">
+                                        (Optional)
+                                    </span>
+                                </label>
+                                <select
+                                    className="block w-full border-gray-300 rounded-lg shadow-sm border p-3 focus:ring-brand-500 focus:border-brand-500"
+                                    value={selParentOrderId}
+                                    onChange={(e) =>
+                                        setSelParentOrderId(e.target.value)
+                                    }
+                                >
+                                    <option value="">
+                                        Select Parent Job (Optional)...
+                                    </option>
+                                    {eligibleParentOrders.map((o) => (
+                                        <option key={o.id} value={o.id}>
+                                            Job #
+                                            {String(o.id)
+                                                .slice(-6)
+                                                .toUpperCase()}{" "}
+                                            ({o.created_at.split("T")[0]})
+                                        </option>
+                                    ))}
+                                </select>
+                                {eligibleParentOrders.length === 0 && (
+                                    <p className="mt-1 text-xs text-amber-500 italic">
+                                        No completed parent work orders found
+                                        for this type.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 3. Assign Worker */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
                                 3. Assign Worker
@@ -277,7 +296,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                             </select>
                         </div>
 
-                        {/* Deadline */}
+                        {/* 4. Due Date */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
                                 4. Due Date
@@ -291,10 +310,28 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                             />
                         </div>
 
-                        {/* Image Upload */}
+                        {/* 5. No. of Pieces */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
+                                5. No. of Pieces
+                            </label>
+                            <input
+                                type="number"
+                                min="0"
+                                className="block w-full border-gray-300 rounded-lg shadow-sm border p-3 focus:ring-brand-500 focus:border-brand-500"
+                                value={noOfPieces}
+                                onChange={(e) => setNoOfPieces(e.target.value)}
+                                placeholder="Enter number of pieces..."
+                            />
+                        </div>
+
+                        {/* 6. Image Upload */}
                         <div className="col-span-1 md:col-span-2">
                             <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
-                                5. Reference Image (Optional)
+                                6. Reference Image{" "}
+                                <span className="text-gray-400 font-normal normal-case">
+                                    (Optional)
+                                </span>
                             </label>
                             <div className="flex items-start gap-4">
                                 <div className="flex-1">
@@ -308,15 +345,18 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                                         PNG, JPG, GIF up to 5MB
                                     </p>
                                 </div>
-                                {image && (
+                                {imagePreview && (
                                     <div className="relative h-20 w-20 border rounded-lg overflow-hidden bg-gray-50">
                                         <img
-                                            src={image}
+                                            src={imagePreview}
                                             alt="Preview"
                                             className="h-full w-full object-cover"
                                         />
                                         <button
-                                            onClick={() => setImage(null)}
+                                            onClick={() => {
+                                                setImage(null);
+                                                setImagePreview(null);
+                                            }}
                                             className="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-1 hover:bg-red-600 transition-colors"
                                         >
                                             <svg
@@ -337,54 +377,75 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                                 )}
                             </div>
                         </div>
+
+                        {/* 7. Remarks */}
+                        <div className="col-span-1 md:col-span-2">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
+                                7. Remarks{" "}
+                                <span className="text-gray-400 font-normal normal-case">
+                                    (Optional)
+                                </span>
+                            </label>
+                            <textarea
+                                className="block w-full border-gray-300 rounded-lg shadow-sm border p-3 focus:ring-brand-500 focus:border-brand-500 resize-none"
+                                rows={3}
+                                placeholder="Add any remarks or instructions..."
+                                value={remarks}
+                                onChange={(e) => setRemarks(e.target.value)}
+                            />
+                        </div>
                     </div>
 
-                    {/* Item Selection */}
-                    {(selPurchaseId || selParentOrderId) && (
-                        <div className="border rounded-xl p-6 bg-gray-50 shadow-inner">
-                            <div className="flex justify-between items-center mb-4">
-                                <label className="text-sm font-bold text-gray-700 uppercase tracking-widest">
-                                    6. Select Items to Assign
-                                </label>
-                                <button
-                                    onClick={handleSelectAll}
-                                    className="text-xs text-brand-700 font-bold hover:bg-brand-100 px-3 py-1 rounded-full transition-colors"
-                                >
-                                    {selectedItems.size ===
-                                    availableItems.length
-                                        ? "Deselect All"
-                                        : "Select All"}
-                                </button>
-                            </div>
-                            <div className="max-h-72 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-1">
-                                {availableItems.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        onClick={() => toggleItem(item.id)}
-                                        className={`cursor-pointer border-2 rounded-xl p-3 text-center transition-all duration-200 shadow-sm ${
-                                            selectedItems.has(item.id)
-                                                ? "bg-brand-600 border-brand-600 text-white transform scale-105"
-                                                : "bg-white border-gray-200 hover:border-brand-300 text-gray-700 hover:shadow-md"
-                                        }`}
+                    {/* Item Selection (shown only when purchase/parent is selected) */}
+                    {(selPurchaseId || selParentOrderId) &&
+                        availableItems.length > 0 && (
+                            <div className="border rounded-xl p-6 bg-gray-50 shadow-inner">
+                                <div className="flex justify-between items-center mb-4">
+                                    <label className="text-sm font-bold text-gray-700 uppercase tracking-widest">
+                                        8. Select Items to Assign{" "}
+                                        <span className="text-gray-400 font-normal normal-case">
+                                            (Optional)
+                                        </span>
+                                    </label>
+                                    <button
+                                        onClick={handleSelectAll}
+                                        className="text-xs text-brand-700 font-bold hover:bg-brand-100 px-3 py-1 rounded-full transition-colors"
                                     >
-                                        <div className="font-black text-base">
-                                            Sr. {item.s_no}
-                                        </div>
+                                        {selectedItems.size ===
+                                        availableItems.length
+                                            ? "Deselect All"
+                                            : "Select All"}
+                                    </button>
+                                </div>
+                                <div className="max-h-72 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-1">
+                                    {availableItems.map((item) => (
                                         <div
-                                            className={`text-xs mt-1 ${selectedItems.has(item.id) ? "text-brand-50" : "text-gray-500"}`}
+                                            key={item.id}
+                                            onClick={() => toggleItem(item.id)}
+                                            className={`cursor-pointer border-2 rounded-xl p-3 text-center transition-all duration-200 shadow-sm ${
+                                                selectedItems.has(item.id)
+                                                    ? "bg-brand-600 border-brand-600 text-white transform scale-105"
+                                                    : "bg-white border-gray-200 hover:border-brand-300 text-gray-700 hover:shadow-md"
+                                            }`}
                                         >
-                                            {item.size_meters}m |{" "}
-                                            {item.pieces_round} pcs
+                                            <div className="font-black text-base">
+                                                Sr. {item.s_no}
+                                            </div>
+                                            <div
+                                                className={`text-xs mt-1 ${selectedItems.has(item.id) ? "text-brand-50" : "text-gray-500"}`}
+                                            >
+                                                {item.size_meters}m |{" "}
+                                                {item.pieces_round} pcs
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                                <div className="mt-4 text-right text-xs font-medium text-gray-400 uppercase tracking-tighter">
+                                    {selectedItems.size} of{" "}
+                                    {availableItems.length} items chosen
+                                </div>
                             </div>
-                            <div className="mt-4 text-right text-xs font-medium text-gray-400 uppercase tracking-tighter">
-                                {selectedItems.size} of {availableItems.length}{" "}
-                                items chosen
-                            </div>
-                        </div>
-                    )}
+                        )}
 
                     {/* Action Buttons */}
                     <div className="flex justify-end gap-3 pt-6 border-t">
@@ -397,9 +458,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                         <button
                             onClick={handleSubmit}
                             disabled={
-                                !selWorkerId ||
-                                !deadline ||
-                                selectedItems.size === 0
+                                !selWorkTypeId || !selWorkerId || !deadline
                             }
                             className="px-8 py-2.5 bg-brand-600 text-white rounded-lg font-bold shadow-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95 transition-all"
                         >

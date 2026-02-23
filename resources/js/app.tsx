@@ -11,9 +11,13 @@ import { Dashboard } from "./pages/Dashboard/index";
 import { PurchaseEntry } from "./pages/Purchases/index";
 import { PurchaseReport } from "./pages/Reports/PurchaseReport";
 import { MasterData } from "./pages/MasterData/index";
-import { WorkOrders } from "./pages/WorkOrders/index";
+import {
+    WorkOrdersPageRoute,
+    WorkOrderAddRoute,
+} from "./pages/WorkOrders/index";
 import { WorkOrderReport } from "./pages/Reports/WorkOrderReport";
 import { OverdueWorkOrdersReport } from "./pages/Reports/OverdueWorkOrdersReport";
+import { LedgerReport } from "./pages/Reports/LedgerReport";
 import { ProfilePage } from "./pages/Profile/index";
 import { ExpiredPage } from "./pages/Error/Expired";
 import { Toaster } from "react-hot-toast";
@@ -115,7 +119,15 @@ const AppContent: React.FC = () => {
                     path="/work-orders"
                     element={
                         <ProtectedRoute>
-                            <WorkOrders />
+                            <WorkOrdersPageRoute />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/work-orders/add"
+                    element={
+                        <ProtectedRoute>
+                            <WorkOrderAddRoute />
                         </ProtectedRoute>
                     }
                 />
@@ -136,6 +148,14 @@ const AppContent: React.FC = () => {
                     element={
                         <ProtectedRoute>
                             <OverdueWorkOrdersReport />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/reports/ledger"
+                    element={
+                        <ProtectedRoute>
+                            <LedgerReport />
                         </ProtectedRoute>
                     }
                 />

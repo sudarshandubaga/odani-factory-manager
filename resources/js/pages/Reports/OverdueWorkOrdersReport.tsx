@@ -63,6 +63,9 @@ export const OverdueWorkOrdersReport: React.FC = () => {
                 <table className="w-full border-collapse border border-black text-sm">
                     <thead>
                         <tr className="bg-gray-100">
+                            <th className="border border-black px-2 py-1 text-center w-12">
+                                Image
+                            </th>
                             <th className="border border-black px-2 py-1 text-left">
                                 Order ID
                             </th>
@@ -87,7 +90,7 @@ export const OverdueWorkOrdersReport: React.FC = () => {
                         {orders.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan={6}
+                                    colSpan={7}
                                     className="border border-black px-2 py-10 text-center text-gray-500"
                                 >
                                     No overdue work orders found.
@@ -96,6 +99,19 @@ export const OverdueWorkOrdersReport: React.FC = () => {
                         ) : (
                             orders.map((order) => (
                                 <tr key={order.id}>
+                                    <td className="border border-black px-2 py-1 text-center">
+                                        {(order.image_url || order.image) && (
+                                            <img
+                                                src={
+                                                    order.image_url ||
+                                                    order.image ||
+                                                    ""
+                                                }
+                                                alt="WO"
+                                                className="w-10 h-10 object-cover mx-auto rounded border border-gray-200"
+                                            />
+                                        )}
+                                    </td>
                                     <td className="border border-black px-2 py-1 font-mono">
                                         {String(order.id)
                                             .slice(-6)

@@ -1,20 +1,36 @@
-import React, { useState } from "react";
+import React from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { WorkOrderList } from "./WorkOrderList";
 import { WorkOrderAdd } from "./WorkOrderAdd";
 
-export const WorkOrders: React.FC = () => {
-    const [view, setView] = useState<"list" | "create">("list");
+export const WorkOrdersPageRoute: React.FC = () => {
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const workTypeId = searchParams.get("type") || undefined;
 
-    if (view === "create") {
-        return (
-            <WorkOrderAdd
-                onCancel={() => setView("list")}
-                onSuccess={() => setView("list")}
-            />
-        );
-    }
-
-    return <WorkOrderList onCreateClick={() => setView("create")} />;
+    return (
+        <WorkOrderList
+            onCreateClick={() => {
+                const url = workTypeId
+                    ? `/work-orders/add?type=${workTypeId}`
+                    : "/work-orders/add";
+                navigate(url);
+            }}
+            workTypeId={workTypeId}
+        />
+    );
 };
 
-export default WorkOrders;
+export const WorkOrderAddRoute: React.FC = () => {
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const workTypeId = searchParams.get("type") || undefined;
+
+    return (
+        <WorkOrderAdd
+            onCancel={() => navigate(-1)}
+            onSuccess={() => navigate(-1)}
+            defaultWorkTypeId={workTypeId}
+        />
+    );
+};

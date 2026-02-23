@@ -15,6 +15,11 @@ class WorkOrder extends Model
         'deadline',
         'status',
         'image',
+        'received_pcs',
+        'due_pcs',
+        'notes',
+        'no_of_pieces',
+        'remarks',
     ];
 
     protected $appends = ['image_url'];

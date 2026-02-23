@@ -34,12 +34,12 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">Purchases</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Khilai</h2>
                 <button
                     onClick={onCreateClick}
                     className="btn-primary flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700"
                 >
-                    <Plus className="w-4 h-4" /> New Purchase
+                    <Plus className="w-4 h-4" /> New Khilai
                 </button>
             </div>
             <div className="bg-white shadow overflow-hidden rounded-md h-[500px] relative">
@@ -118,7 +118,7 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                         <div className="p-4 border-b flex justify-between items-center bg-brand-600 text-white">
                             <div>
                                 <h3 className="text-xl font-bold">
-                                    Purchase Information
+                                    Khilai Information
                                 </h3>
                                 <p className="text-sm opacity-90">
                                     Invoice:{" "}

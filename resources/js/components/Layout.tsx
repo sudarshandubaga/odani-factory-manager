@@ -25,6 +25,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/slices/authSlice";
 import { RootState } from "../store";
 import axios from "axios";
+import { storage } from "../services/storage";
+import { WorkType } from "../types";
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({
     children,
@@ -40,7 +42,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     const [activeDropdown, setActiveDropdown] = React.useState<string | null>(
         null,
     );
+    const [rootWorkTypes, setRootWorkTypes] = React.useState<WorkType[]>([]);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        storage
+            .getWorkTypes()
+            .then((types) => {
+                setRootWorkTypes(types.filter((t) => !t.parent_id));
+            })
+            .catch(() => {});
+    }, []);
 
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -199,45 +211,52 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                                     label="Dashboard"
                                     icon={LayoutDashboard}
                                 />
-                                <Dropdown
-                                    label="Operations"
-                                    id="ops"
-                                    items={[
-                                        {
-                                            to: "/purchase",
-                                            label: "Purchases",
-                                            icon: Package,
-                                        },
-                                        {
-                                            to: "/work-orders",
-                                            label: "Work Orders",
-                                            icon: ClipboardCheck,
-                                        },
-                                    ]}
+                                <NavItem
+                                    to="/purchase"
+                                    label="Khilai"
+                                    icon={Package}
                                 />
-                                <Dropdown
-                                    label="Resources"
-                                    id="res"
-                                    items={[
-                                        {
-                                            to: "/workers",
-                                            label: "Workers",
-                                            icon: Users,
-                                        },
-                                        {
-                                            to: "/settings",
-                                            label: "Masters",
-                                            icon: Settings,
-                                        },
-                                    ]}
+                                {/* Dynamic Work Type links */}
+                                {rootWorkTypes.length === 0 ? (
+                                    <NavItem
+                                        to="/work-orders"
+                                        label="Work Orders"
+                                        icon={ClipboardCheck}
+                                    />
+                                ) : rootWorkTypes.length === 1 ? (
+                                    <NavItem
+                                        to={`/work-orders?type=${rootWorkTypes[0].id}`}
+                                        label={rootWorkTypes[0].name}
+                                        icon={ClipboardCheck}
+                                    />
+                                ) : (
+                                    <Dropdown
+                                        label="Work Orders"
+                                        id="work-types"
+                                        items={rootWorkTypes.map((wt) => ({
+                                            to: `/work-orders?type=${wt.id}`,
+                                            label: wt.name,
+                                            icon: ClipboardCheck,
+                                        }))}
+                                    />
+                                )}
+                                <NavItem
+                                    to="/settings"
+                                    label="Master"
+                                    icon={Settings}
                                 />
                                 <Dropdown
                                     label="Reports"
                                     id="rep"
                                     items={[
                                         {
+                                            to: "/reports/ledger",
+                                            label: "Ledger Report",
+                                            icon: FileText,
+                                        },
+                                        {
                                             to: "/reports/overdue",
-                                            label: "Overdue Jobs",
+                                            label: "Overdue Report",
                                             icon: AlertTriangle,
                                         },
                                     ]}
@@ -404,36 +423,46 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                                 label="Dashboard"
                                 icon={LayoutDashboard}
                             />
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 mt-4 mb-1">
-                                    Production
-                                </p>
-                                <NavItem
-                                    to="/purchase"
-                                    label="Purchases"
-                                    icon={Package}
-                                />
+                            <NavItem
+                                to="/purchase"
+                                label="Khilai"
+                                icon={Package}
+                            />
+                            {/* Dynamic Work Type links */}
+                            {rootWorkTypes.length === 0 ? (
                                 <NavItem
                                     to="/work-orders"
                                     label="Work Orders"
                                     icon={ClipboardCheck}
                                 />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 mt-4 mb-1">
-                                    Resources
-                                </p>
-                                <NavItem
-                                    to="/workers"
-                                    label="Workers"
-                                    icon={Users}
-                                />
-                                <NavItem
-                                    to="/settings"
-                                    label="Masters"
-                                    icon={Settings}
-                                />
-                            </div>
+                            ) : (
+                                rootWorkTypes.map((wt) => (
+                                    <NavItem
+                                        key={wt.id}
+                                        to={`/work-orders?type=${wt.id}`}
+                                        label={wt.name}
+                                        icon={ClipboardCheck}
+                                    />
+                                ))
+                            )}
+                            <NavItem
+                                to="/settings"
+                                label="Master"
+                                icon={Settings}
+                            />
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 mt-4 mb-1">
+                                Reports
+                            </p>
+                            <NavItem
+                                to="/reports/ledger"
+                                label="Ledger Report"
+                                icon={FileText}
+                            />
+                            <NavItem
+                                to="/reports/overdue"
+                                label="Overdue Report"
+                                icon={AlertTriangle}
+                            />
                             <div className="pt-4 border-t border-gray-100">
                                 <button
                                     onClick={handleLogout}

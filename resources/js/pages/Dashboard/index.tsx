@@ -39,7 +39,7 @@ export const Dashboard: React.FC = () => {
                             <div className="ml-5 w-0 flex-1">
                                 <dl>
                                     <dt className="text-sm font-medium text-gray-500 truncate">
-                                        Total Purchases
+                                        Total Khilai
                                     </dt>
                                     <dd className="text-lg font-medium text-gray-900">
                                         {purchases.length}
@@ -124,7 +124,7 @@ export const Dashboard: React.FC = () => {
             <div className="bg-white shadow rounded-lg">
                 <div className="px-4 py-5 sm:px-6">
                     <h3 className="text-lg leading-6 font-medium text-gray-900">
-                        Recent Purchases
+                        Recent Khilai
                     </h3>
                 </div>
                 <ul className="divide-y divide-gray-200">
@@ -152,7 +152,7 @@ export const Dashboard: React.FC = () => {
                     ))}
                     {recentPurchases.length === 0 && (
                         <li className="px-4 py-4 text-sm text-gray-500">
-                            No purchases yet.
+                            No khilai yet.
                         </li>
                     )}
                 </ul>

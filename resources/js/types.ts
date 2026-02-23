@@ -75,6 +75,11 @@ export interface WorkOrder {
     deadline: string;
     image?: string | null;
     image_url?: string | null;
+    no_of_pieces?: number | null;
+    remarks?: string | null;
+    received_pcs?: number | null;
+    due_pcs?: number | null;
+    notes?: string | null;
     status: "active" | "completed";
     created_at: string;
     childOrders?: WorkOrder[];

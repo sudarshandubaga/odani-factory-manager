@@ -62,8 +62,12 @@ export const storage = {
     updateWorkOrderStatus: async (
         id: string | number,
         status: "active" | "completed",
+        data?: { received_pcs?: number; notes?: string },
     ) => {
-        const res = await api.put<WorkOrder>(`/work-orders/${id}`, { status });
+        const res = await api.put<WorkOrder>(`/work-orders/${id}`, {
+            status,
+            ...data,
+        });
         return res.data;
     },
 };

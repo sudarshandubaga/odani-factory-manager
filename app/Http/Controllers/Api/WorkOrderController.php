@@ -19,13 +19,15 @@ class WorkOrderController extends Controller
     {
         $validated = $request->validate([
             'work_type_id' => 'required|exists:work_types,id',
-            'purchase_id' => 'required_without:parent_order_id|nullable|exists:purchases,id',
-            'parent_order_id' => 'required_without:purchase_id|nullable|exists:work_orders,id',
+            'purchase_id' => 'nullable|exists:purchases,id',
+            'parent_order_id' => 'nullable|exists:work_orders,id',
             'worker_id' => 'required|exists:workers,id',
-            'item_ids' => 'required|array',
-            'item_ids.*' => 'required|exists:purchase_items,id',
+            'item_ids' => 'nullable|array',
+            'item_ids.*' => 'exists:purchase_items,id',
             'deadline' => 'required|date',
-            'image' => 'nullable|string',
+            'image' => 'nullable',
+            'no_of_pieces' => 'nullable|integer',
+            'remarks' => 'nullable|string',
         ]);
 
         $purchaseId = $validated['purchase_id'] ?? null;
@@ -35,7 +37,10 @@ class WorkOrderController extends Controller
         }
 
         $imagePath = null;
-        if (!empty($validated['image'])) {
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('work-orders', 'public');
+            $imagePath = 'storage/' . $imagePath;
+        } elseif (!empty($validated['image']) && is_string($validated['image'])) {
             $imageData = $validated['image'];
             if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $type)) {
                 $imageData = substr($imageData, strpos($imageData, ',') + 1);
@@ -65,14 +70,14 @@ class WorkOrderController extends Controller
             'deadline' => $validated['deadline'],
             'image' => $imagePath,
             'status' => 'active',
+            'no_of_pieces' => $validated['no_of_pieces'] ?? null,
+            'remarks' => $validated['remarks'] ?? null,
         ]);
 
-        $workOrder->items()->attach($validated['item_ids']);
-
-        // Update items status - Note: This might be tricky if one item is in multiple work orders 
-        // but typically an item progresses from one work order to next.
-        // For now keep the logic as is.
-        \App\Models\PurchaseItem::whereIn('id', $validated['item_ids'])->update(['status' => 'assigned']);
+        if (!empty($validated['item_ids'])) {
+            $workOrder->items()->attach($validated['item_ids']);
+            \App\Models\PurchaseItem::whereIn('id', $validated['item_ids'])->update(['status' => 'assigned']);
+        }
 
         return $workOrder->load(['purchase', 'worker', 'workType', 'items', 'parentOrder']);
     }
@@ -97,6 +102,8 @@ class WorkOrderController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|in:active,completed',
+            'received_pcs' => 'nullable|integer',
+            'notes' => 'nullable|string',
         ]);
 
         $workOrder->update($validated);

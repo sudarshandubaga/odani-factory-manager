@@ -22,6 +22,8 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
     const [invoiceNo, setInvoiceNo] = useState("");
     const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
     const [patSize, setPatSize] = useState<number>(2.5);
+    const [itemType, setItemType] = useState<"lot" | "pieces">("lot");
+    const [totalPieces, setTotalPieces] = useState<number>(0);
     const [items, setItems] = useState<PurchaseItem[]>([
         {
             id: "1",
@@ -130,33 +132,60 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
             return;
         }
 
-        const validItems = items.filter((i) => i.sizeMeters > 0);
-        if (validItems.length === 0) {
-            toast.error("Please add at least one item with size > 0");
-            return;
-        }
+        if (itemType === "lot") {
+            const validItems = items.filter((i) => i.sizeMeters > 0);
+            if (validItems.length === 0) {
+                toast.error("Please add at least one item with size > 0");
+                return;
+            }
 
-        const purchase = {
-            supplier_id: supplierId,
-            invoice_no: invoiceNo,
-            date,
-            pat_size: patSize,
-            items: validItems.map((i) => ({
-                s_no: i.sNo,
-                size_meters: i.sizeMeters,
-                pat_raw: i.patRaw,
-                pat_round: i.patRound,
-                pieces_raw: i.piecesRaw,
-                pieces_round: i.piecesRound,
-            })),
-        };
+            const purchase = {
+                supplier_id: supplierId,
+                invoice_no: invoiceNo,
+                date,
+                pat_size: patSize,
+                item_type: itemType,
+                total_pieces: null,
+                items: validItems.map((i) => ({
+                    s_no: i.sNo,
+                    size_meters: i.sizeMeters,
+                    pat_raw: i.patRaw,
+                    pat_round: i.patRound,
+                    pieces_raw: i.piecesRaw,
+                    pieces_round: i.piecesRound,
+                })),
+            };
 
-        try {
-            await storage.addPurchase(purchase);
-            toast.success("Purchase record saved successfully!");
-            onSuccess();
-        } catch (error) {
-            toast.error("Failed to save purchase");
+            try {
+                await storage.addPurchase(purchase);
+                toast.success("Purchase record saved successfully!");
+                onSuccess();
+            } catch (error) {
+                toast.error("Failed to save purchase");
+            }
+        } else {
+            if (!totalPieces || totalPieces <= 0) {
+                toast.error("Please enter a valid Total Pieces value");
+                return;
+            }
+
+            const purchase = {
+                supplier_id: supplierId,
+                invoice_no: invoiceNo,
+                date,
+                pat_size: patSize,
+                item_type: itemType,
+                total_pieces: totalPieces,
+                items: [],
+            };
+
+            try {
+                await storage.addPurchase(purchase);
+                toast.success("Purchase record saved successfully!");
+                onSuccess();
+            } catch (error) {
+                toast.error("Failed to save purchase");
+            }
         }
     };
 
@@ -193,7 +222,7 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <h2 className="text-2xl font-bold text-gray-900">
-                    New Purchase Entry
+                    New Khilai Entry
                 </h2>
             </div>
 
@@ -252,79 +281,160 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm border p-2"
                         />
                     </div>
-                </div>
 
-                <div className="border rounded-md overflow-hidden">
-                    <div className="grid grid-cols-7 bg-gray-100 p-2 text-xs font-bold text-gray-700 border-b">
-                        <div className="col-span-1">S. No.</div>
-                        <div className="col-span-1">Size (m)</div>
-                        <div className="col-span-1">Pat (Dec)</div>
-                        <div className="col-span-1">Pat (Round)</div>
-                        <div className="col-span-1">Final (Dec)</div>
-                        <div className="col-span-1">Final (Round)</div>
-                        <div className="col-span-1">Action</div>
-                    </div>
-                    <div className="h-[400px]">
-                        <div className="max-h-[400px] overflow-y-auto">
-                            {items.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="grid grid-cols-7 p-2 border-b items-center text-sm hover:bg-gray-50 bg-white"
-                                >
-                                    <div className="col-span-1 text-gray-500 pl-2">
-                                        {item.sNo}
-                                    </div>
-                                    <div className="col-span-1">
-                                        <input
-                                            type="number"
-                                            className="w-24 border rounded px-2 py-1 outline-none"
-                                            value={item.sizeMeters || ""}
-                                            onChange={(e) =>
-                                                handleItemChange(
-                                                    item.id,
-                                                    "sizeMeters",
-                                                    parseFloat(e.target.value),
-                                                )
-                                            }
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                    <div className="col-span-1 text-gray-600">
-                                        {item.patRaw.toFixed(2)}
-                                    </div>
-                                    <div className="col-span-1 font-medium">
-                                        {item.patRound}
-                                    </div>
-                                    <div className="col-span-1 text-gray-600">
-                                        {item.piecesRaw}
-                                    </div>
-                                    <div className="col-span-1 font-bold text-brand-700">
-                                        {item.piecesRound}
-                                    </div>
-                                    <div className="col-span-1">
-                                        <button
-                                            onClick={() =>
-                                                removeItemRow(item.id)
-                                            }
-                                            className="text-red-500 hover:text-red-700"
-                                        >
-                                            <Trash className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Item Type
+                        </label>
+                        <div className="mt-1 flex rounded-md overflow-hidden border border-gray-300 shadow-sm">
+                            <button
+                                type="button"
+                                onClick={() => setItemType("lot")}
+                                className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                                    itemType === "lot"
+                                        ? "bg-brand-600 text-white"
+                                        : "bg-white text-gray-700 hover:bg-gray-50"
+                                }`}
+                            >
+                                Lot
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setItemType("pieces")}
+                                className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                                    itemType === "pieces"
+                                        ? "bg-brand-600 text-white"
+                                        : "bg-white text-gray-700 hover:bg-gray-50"
+                                }`}
+                            >
+                                Pieces
+                            </button>
                         </div>
                     </div>
+
+                    {itemType === "pieces" && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Total Pieces
+                            </label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={totalPieces || ""}
+                                onChange={(e) =>
+                                    setTotalPieces(
+                                        parseInt(e.target.value) || 0,
+                                    )
+                                }
+                                placeholder="Enter total pieces"
+                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm border p-2"
+                            />
+                        </div>
+                    )}
                 </div>
 
-                <div className="mt-4 flex gap-4">
-                    <button
-                        onClick={addItemRow}
-                        className="flex items-center gap-2 text-brand-600 hover:text-brand-800 font-medium"
-                    >
-                        <FilePlus className="w-4 h-4" /> Add Row
-                    </button>
-                </div>
+                {itemType === "lot" ? (
+                    <>
+                        <div className="border rounded-md overflow-hidden">
+                            <div className="grid grid-cols-7 bg-gray-100 p-2 text-xs font-bold text-gray-700 border-b">
+                                <div className="col-span-1">S. No.</div>
+                                <div className="col-span-1">Size (m)</div>
+                                <div className="col-span-1">Pat (Dec)</div>
+                                <div className="col-span-1">Pat (Round)</div>
+                                <div className="col-span-1">Final (Dec)</div>
+                                <div className="col-span-1">Final (Round)</div>
+                                <div className="col-span-1">Action</div>
+                            </div>
+                            <div className="h-[400px]">
+                                <div className="max-h-[400px] overflow-y-auto">
+                                    {items.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="grid grid-cols-7 p-2 border-b items-center text-sm hover:bg-gray-50 bg-white"
+                                        >
+                                            <div className="col-span-1 text-gray-500 pl-2">
+                                                {item.sNo}
+                                            </div>
+                                            <div className="col-span-1">
+                                                <input
+                                                    type="number"
+                                                    className="w-24 border rounded px-2 py-1 outline-none"
+                                                    value={
+                                                        item.sizeMeters || ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        handleItemChange(
+                                                            item.id,
+                                                            "sizeMeters",
+                                                            parseFloat(
+                                                                e.target.value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                            <div className="col-span-1 text-gray-600">
+                                                {item.patRaw.toFixed(2)}
+                                            </div>
+                                            <div className="col-span-1 font-medium">
+                                                {item.patRound}
+                                            </div>
+                                            <div className="col-span-1 text-gray-600">
+                                                {item.piecesRaw}
+                                            </div>
+                                            <div className="col-span-1 font-bold text-brand-700">
+                                                {item.piecesRound}
+                                            </div>
+                                            <div className="col-span-1">
+                                                <button
+                                                    onClick={() =>
+                                                        removeItemRow(item.id)
+                                                    }
+                                                    className="text-red-500 hover:text-red-700"
+                                                >
+                                                    <Trash className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex gap-4">
+                            <button
+                                onClick={addItemRow}
+                                className="flex items-center gap-2 text-brand-600 hover:text-brand-800 font-medium"
+                            >
+                                <FilePlus className="w-4 h-4" /> Add Row
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="border rounded-md p-6 bg-gray-50 flex flex-col items-center justify-center gap-3">
+                        <p className="text-sm text-gray-500 font-medium">
+                            Total Pieces for this purchase
+                        </p>
+                        <div className="flex items-center gap-4">
+                            <input
+                                type="number"
+                                min="0"
+                                value={totalPieces || ""}
+                                onChange={(e) =>
+                                    setTotalPieces(
+                                        parseInt(e.target.value) || 0,
+                                    )
+                                }
+                                placeholder="Enter total pieces"
+                                className="w-48 border-gray-300 rounded-md shadow-sm border p-3 text-center text-xl font-bold outline-none focus:ring-2 focus:ring-brand-500"
+                            />
+                            <span className="text-gray-500 text-sm">
+                                pieces
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 <div className="mt-8 flex justify-end gap-4">
                     <button
@@ -337,7 +447,7 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                         onClick={handleSave}
                         className="flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700"
                     >
-                        <Save className="w-4 h-4" /> Save Purchase
+                        <Save className="w-4 h-4" /> Save Khilai
                     </button>
                 </div>
             </div>

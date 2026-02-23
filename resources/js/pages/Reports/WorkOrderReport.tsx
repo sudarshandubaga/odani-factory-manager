@@ -56,7 +56,7 @@ export const WorkOrderReport: React.FC = () => {
     };
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
-    if (!order || !purchase)
+    if (!order)
         return <div className="p-10 text-center">Work Order not found</div>;
 
     const assignedItems = order.items || [];
@@ -89,13 +89,21 @@ export const WorkOrderReport: React.FC = () => {
                             <span className="font-bold">Work Type:</span>{" "}
                             {getFullWorkName()}
                         </p>
+                        {order.no_of_pieces && (
+                            <p>
+                                <span className="font-bold">
+                                    No. of Pieces:
+                                </span>{" "}
+                                {order.no_of_pieces}
+                            </p>
+                        )}
                     </div>
                     <div className="text-center col-span-1 border-x border-gray-100 px-4">
                         {order.image_url || order.image ? (
                             <img
                                 src={order.image_url || order.image || ""}
                                 alt="Work Reference"
-                                className="max-h-32 mx-auto rounded border border-black shadow-sm"
+                                className="max-h-48 mx-auto rounded border border-black shadow-sm"
                             />
                         ) : (
                             <div className="h-32 flex items-center justify-center text-gray-300 italic text-xs border border-dashed border-gray-200 rounded">
@@ -112,10 +120,20 @@ export const WorkOrderReport: React.FC = () => {
                             <span className="font-bold">Mobile:</span>{" "}
                             {worker?.mobile}
                         </p>
-                        <p>
-                            <span className="font-bold">Source Invoice:</span>{" "}
-                            {purchase.invoice_no}
-                        </p>
+                        {purchase && (
+                            <p>
+                                <span className="font-bold">
+                                    Khilai Invoice:
+                                </span>{" "}
+                                {purchase.invoice_no}
+                            </p>
+                        )}
+                        {order.remarks && (
+                            <p className="mt-2">
+                                <span className="font-bold">Remarks:</span>{" "}
+                                {order.remarks}
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -137,9 +155,9 @@ export const WorkOrderReport: React.FC = () => {
                                         <th className="border border-black px-2 py-1">
                                             Pat
                                         </th>
-                                        <th className="border border-black px-2 py-1">
+                                        {/* <th className="border border-black px-2 py-1">
                                             Final
-                                        </th>
+                                        </th> */}
                                     </>
                                 ) : (
                                     <>
@@ -170,9 +188,9 @@ export const WorkOrderReport: React.FC = () => {
                                             <td className="border border-black px-2 py-1 text-center">
                                                 {item.pat_round}
                                             </td>
-                                            <td className="border border-black px-2 py-1 text-center font-bold">
+                                            {/* <td className="border border-black px-2 py-1 text-center font-bold">
                                                 {item.pieces_round}
-                                            </td>
+                                            </td> */}
                                         </>
                                     ) : (
                                         <>
@@ -206,12 +224,12 @@ export const WorkOrderReport: React.FC = () => {
                                                 0,
                                             )}
                                         </td>
-                                        <td className="border border-black px-2 py-1 text-center">
+                                        {/* <td className="border border-black px-2 py-1 text-center">
                                             {assignedItems.reduce(
                                                 (s, i) => s + i.pieces_round,
                                                 0,
                                             )}
-                                        </td>
+                                        </td> */}
                                     </>
                                 ) : (
                                     <td className="border border-black px-2 py-1 text-center">
@@ -226,6 +244,53 @@ export const WorkOrderReport: React.FC = () => {
                         </tfoot>
                     </table>
                 </div>
+
+                {order.status === "completed" && (
+                    <div className="mt-6 border-t border-black pt-4">
+                        <h3 className="font-bold text-lg mb-2">
+                            Received Summary
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                            {order.no_of_pieces && (
+                                <div className="border border-black p-2 rounded text-center">
+                                    <div className="text-xs text-gray-500 uppercase font-semibold mb-1">
+                                        Assigned Pieces
+                                    </div>
+                                    <div className="text-2xl font-black">
+                                        {order.no_of_pieces}
+                                    </div>
+                                </div>
+                            )}
+                            <div className="border border-black p-2 rounded text-center">
+                                <div className="text-xs text-gray-500 uppercase font-semibold mb-1">
+                                    Completed Pieces
+                                </div>
+                                <div className="text-2xl font-black">
+                                    {order.received_pcs ?? "—"}
+                                </div>
+                            </div>
+                            {order.due_pcs !== null &&
+                                order.due_pcs !== undefined && (
+                                    <div className="border border-black p-2 rounded text-center">
+                                        <div className="text-xs text-gray-500 uppercase font-semibold mb-1">
+                                            Due Pieces
+                                        </div>
+                                        <div className="text-2xl font-black">
+                                            {order.due_pcs}
+                                        </div>
+                                    </div>
+                                )}
+                        </div>
+                        {order.notes && (
+                            <div className="border border-black p-2 rounded mt-3 text-sm">
+                                <span className="font-bold">
+                                    Completion Notes:
+                                </span>{" "}
+                                {order.notes}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="mt-12 flex justify-between items-end">
                     <div className="text-center">

@@ -31,7 +31,7 @@ export const PurchaseReport: React.FC = () => {
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
     if (!purchase)
-        return <div className="p-10 text-center">Purchase not found</div>;
+        return <div className="p-10 text-center">Khilai not found</div>;
 
     return (
         <div className="min-h-screen bg-white text-black max-w-[210mm] mx-auto p-4 print:p-0">
@@ -47,7 +47,7 @@ export const PurchaseReport: React.FC = () => {
                     </div>
                     <div className="text-right">
                         <h2 className="text-xl font-bold uppercase tracking-widest text-gray-500">
-                            Purchase Report
+                            Khilai Report
                         </h2>
                         <div className="mt-2 text-sm">
                             <p>
