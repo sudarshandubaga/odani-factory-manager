@@ -34,14 +34,17 @@ export interface SavedPurchaseItem {
 
 export interface Purchase {
     id: string;
-    supplier_id: string;
-    supplier?: Supplier; // Optional if joined
+    worker_id: string;
+    worker?: Worker; // Optional if joined
     invoice_no: string;
     date: string;
     pat_size: number;
     items: SavedPurchaseItem[];
     items_count?: number;
+    vouchers?: Voucher[];
     created_at: number;
+    item_type: string;
+    total_pieces: number;
 }
 
 export interface Worker {
@@ -83,6 +86,7 @@ export interface WorkOrder {
     status: "active" | "completed";
     created_at: string;
     childOrders?: WorkOrder[];
+    vouchers?: Voucher[];
 }
 
 export interface Tenant {
@@ -100,4 +104,21 @@ export interface User {
     role: "admin";
     profile_photo?: string;
     tenant?: Tenant;
+}
+
+export interface Voucher {
+    id: string;
+    voucher_no: string;
+    date: string;
+    type: "khilai" | "work-order";
+    work_order_id?: string | null;
+    workOrder?: WorkOrder;
+    khilai_id?: string | null;
+    khilai?: Purchase;
+    total_received: number;
+    total_due: number;
+    balance: number;
+    description?: string;
+    image?: string;
+    created_at: string;
 }

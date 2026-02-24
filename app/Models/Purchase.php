@@ -3,29 +3,30 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Purchase extends Model
 {
-    protected $fillable = [
-        'tenant_id',
-        'supplier_id',
-        'invoice_no',
-        'date',
-        'pat_size',
-    ];
+    use SoftDeletes;
+    protected $guarded = [];
 
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    public function supplier()
+    public function worker()
     {
-        return $this->belongsTo(Supplier::class);
+        return $this->belongsTo(Worker::class);
     }
 
     public function items()
     {
         return $this->hasMany(PurchaseItem::class);
+    }
+
+    public function vouchers()
+    {
+        return $this->hasMany(Voucher::class, 'khilai_id');
     }
 }

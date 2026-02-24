@@ -1,5 +1,5 @@
 import React from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { WorkOrderList } from "./WorkOrderList";
 import { WorkOrderAdd } from "./WorkOrderAdd";
 
@@ -16,6 +16,9 @@ export const WorkOrdersPageRoute: React.FC = () => {
                     : "/work-orders/add";
                 navigate(url);
             }}
+            onEditClick={(order) => {
+                navigate(`/work-orders/${order.id}/edit`);
+            }}
             workTypeId={workTypeId}
         />
     );
@@ -31,6 +34,19 @@ export const WorkOrderAddRoute: React.FC = () => {
             onCancel={() => navigate(-1)}
             onSuccess={() => navigate(-1)}
             defaultWorkTypeId={workTypeId}
+        />
+    );
+};
+
+export const WorkOrderEditRoute: React.FC = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+
+    return (
+        <WorkOrderAdd
+            onCancel={() => navigate(-1)}
+            onSuccess={() => navigate(-1)}
+            editId={id}
         />
     );
 };

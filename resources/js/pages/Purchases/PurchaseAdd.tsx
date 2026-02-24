@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { storage } from "../../services/storage";
-import { PurchaseItem, Supplier } from "../../types";
+import { PurchaseItem, Worker } from "../../types";
 import { Trash, Save, FilePlus, ChevronLeft } from "lucide-react";
 import { SearchableSelect } from "../../components/SearchableSelect";
-import { NewSupplierModal } from "../../components/NewSupplierModal";
+import { NewWorkerModal } from "../../components/NewWorkerModal";
 
 interface PurchaseAddProps {
     onCancel: () => void;
     onSuccess: () => void;
+    editId?: string;
 }
 
 import { toast } from "react-hot-toast";
@@ -15,15 +16,17 @@ import { toast } from "react-hot-toast";
 export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
     onCancel,
     onSuccess,
+    editId,
 }) => {
-    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-    const [supplierId, setSupplierId] = useState("");
+    const [workers, setWorkers] = useState<Worker[]>([]);
+    const [workerId, setWorkerId] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [invoiceNo, setInvoiceNo] = useState("");
     const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
     const [patSize, setPatSize] = useState<number>(2.5);
     const [itemType, setItemType] = useState<"lot" | "pieces">("lot");
     const [totalPieces, setTotalPieces] = useState<number>(0);
+    const [isEditing, setIsEditing] = useState(false);
     const [items, setItems] = useState<PurchaseItem[]>([
         {
             id: "1",
@@ -38,21 +41,47 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
     ]);
 
     useEffect(() => {
-        const fetchSuppliers = async () => {
-            const data = await storage.getSuppliers();
-            setSuppliers(data);
-        };
-        fetchSuppliers();
-    }, []);
+        const fetchData = async () => {
+            const data = await storage.getWorkers();
+            setWorkers(data);
 
-    const handleCreateSupplier = async (supplierData: Omit<Supplier, "id">) => {
+            if (editId) {
+                setIsEditing(true);
+                const purchase = await storage.getPurchase(editId);
+                setWorkerId(String(purchase.worker_id));
+                setInvoiceNo(purchase.invoice_no);
+                setDate(purchase.date);
+                setPatSize(Number(purchase.pat_size));
+                setItemType(purchase.item_type as "lot" | "pieces");
+                setTotalPieces(Number(purchase.total_pieces));
+
+                if (purchase.item_type === "lot" && purchase.items) {
+                    setItems(
+                        purchase.items.map((i: any) => ({
+                            id: String(i.id),
+                            sNo: i.s_no,
+                            sizeMeters: Number(i.size_meters),
+                            patRaw: Number(i.pat_raw),
+                            patRound: Number(i.pat_round),
+                            piecesRaw: Number(i.pieces_raw),
+                            piecesRound: Number(i.pieces_round),
+                            status: i.status || "pending",
+                        })),
+                    );
+                }
+            }
+        };
+        fetchData();
+    }, [editId]);
+
+    const handleCreateWorker = async (workerData: Omit<Worker, "id">) => {
         try {
-            const newSup = await storage.addSupplier(supplierData);
-            setSuppliers([...suppliers, newSup]);
-            setSupplierId(newSup.id);
-            toast.success("New supplier created and selected!");
+            const newWorker = await storage.addWorker(workerData);
+            setWorkers([...workers, newWorker]);
+            setWorkerId(newWorker.id);
+            toast.success("New worker created and selected!");
         } catch (error) {
-            toast.error("Failed to create supplier");
+            toast.error("Failed to create worker");
         }
     };
 
@@ -127,65 +156,51 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
     };
 
     const handleSave = async () => {
-        if (!supplierId || !invoiceNo) {
-            toast.error("Supplier and Invoice No. are required");
+        if (!workerId || !invoiceNo) {
+            toast.error("Worker and Invoice No. are required");
             return;
         }
 
-        if (itemType === "lot") {
-            const validItems = items.filter((i) => i.sizeMeters > 0);
-            if (validItems.length === 0) {
-                toast.error("Please add at least one item with size > 0");
-                return;
-            }
+        const validItems =
+            itemType === "lot" ? items.filter((i) => i.sizeMeters > 0) : [];
+        if (itemType === "lot" && validItems.length === 0) {
+            toast.error("Please add at least one item with size > 0");
+            return;
+        }
 
-            const purchase = {
-                supplier_id: supplierId,
-                invoice_no: invoiceNo,
-                date,
-                pat_size: patSize,
-                item_type: itemType,
-                total_pieces: null,
-                items: validItems.map((i) => ({
-                    s_no: i.sNo,
-                    size_meters: i.sizeMeters,
-                    pat_raw: i.patRaw,
-                    pat_round: i.patRound,
-                    pieces_raw: i.piecesRaw,
-                    pieces_round: i.piecesRound,
-                })),
-            };
+        if (itemType === "pieces" && (!totalPieces || totalPieces <= 0)) {
+            toast.error("Please enter a valid Total Pieces value");
+            return;
+        }
 
-            try {
-                await storage.addPurchase(purchase);
+        const purchaseData = {
+            worker_id: workerId,
+            invoice_no: invoiceNo,
+            date,
+            pat_size: patSize,
+            item_type: itemType,
+            total_pieces: itemType === "pieces" ? totalPieces : null,
+            items: validItems.map((i) => ({
+                s_no: i.sNo,
+                size_meters: i.sizeMeters,
+                pat_raw: i.patRaw,
+                pat_round: i.patRound,
+                pieces_raw: i.piecesRaw,
+                pieces_round: i.piecesRound,
+            })),
+        };
+
+        try {
+            if (editId) {
+                await storage.updatePurchase(editId, purchaseData);
+                toast.success("Purchase record updated successfully!");
+            } else {
+                await storage.addPurchase(purchaseData);
                 toast.success("Purchase record saved successfully!");
-                onSuccess();
-            } catch (error) {
-                toast.error("Failed to save purchase");
             }
-        } else {
-            if (!totalPieces || totalPieces <= 0) {
-                toast.error("Please enter a valid Total Pieces value");
-                return;
-            }
-
-            const purchase = {
-                supplier_id: supplierId,
-                invoice_no: invoiceNo,
-                date,
-                pat_size: patSize,
-                item_type: itemType,
-                total_pieces: totalPieces,
-                items: [],
-            };
-
-            try {
-                await storage.addPurchase(purchase);
-                toast.success("Purchase record saved successfully!");
-                onSuccess();
-            } catch (error) {
-                toast.error("Failed to save purchase");
-            }
+            onSuccess();
+        } catch (error) {
+            toast.error("Failed to save purchase");
         }
     };
 
@@ -209,10 +224,10 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
 
     return (
         <div className="space-y-6">
-            <NewSupplierModal
+            <NewWorkerModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onSave={handleCreateSupplier}
+                onSave={handleCreateWorker}
             />
             <div className="flex items-center gap-4">
                 <button
@@ -222,7 +237,7 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <h2 className="text-2xl font-bold text-gray-900">
-                    New Khilai Entry
+                    {isEditing ? "Edit Khilai Entry" : "New Khilai Entry"}
                 </h2>
             </div>
 
@@ -230,15 +245,15 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Supplier
+                            Worker
                         </label>
                         <SearchableSelect
-                            options={suppliers}
-                            value={supplierId}
-                            onChange={setSupplierId}
-                            placeholder="Select Supplier"
+                            options={workers}
+                            value={workerId}
+                            onChange={setWorkerId}
+                            placeholder="Select Worker"
                             onAddNew={() => setIsModalOpen(true)}
-                            addNewLabel="New Supplier"
+                            addNewLabel="New Worker"
                         />
                     </div>
 
@@ -447,7 +462,8 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                         onClick={handleSave}
                         className="flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700"
                     >
-                        <Save className="w-4 h-4" /> Save Khilai
+                        <Save className="w-4 h-4" />{" "}
+                        {isEditing ? "Update Khilai" : "Save Khilai"}
                     </button>
                 </div>
             </div>

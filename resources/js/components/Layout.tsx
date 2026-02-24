@@ -20,6 +20,7 @@ import {
     ShieldCheck,
     Truck,
     Tag,
+    Receipt,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/slices/authSlice";
@@ -255,6 +256,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                                             icon: FileText,
                                         },
                                         {
+                                            to: "/vouchers",
+                                            label: "Vouchers",
+                                            icon: Receipt,
+                                        },
+                                        {
                                             to: "/reports/overdue",
                                             label: "Overdue Report",
                                             icon: AlertTriangle,
@@ -457,6 +463,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                                 to="/reports/ledger"
                                 label="Ledger Report"
                                 icon={FileText}
+                            />
+                            <NavItem
+                                to="/vouchers"
+                                label="Vouchers"
+                                icon={Receipt}
                             />
                             <NavItem
                                 to="/reports/overdue"

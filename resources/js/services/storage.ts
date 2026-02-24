@@ -1,5 +1,12 @@
 import api from "./api";
-import { Purchase, Supplier, Worker, WorkOrder, WorkType } from "../types";
+import {
+    Purchase,
+    Supplier,
+    Voucher,
+    Worker,
+    WorkOrder,
+    WorkType,
+} from "../types";
 
 export const storage = {
     getPurchases: async () => {
@@ -13,6 +20,33 @@ export const storage = {
     addPurchase: async (p: any) => {
         const res = await api.post<Purchase>("/purchases", p);
         return res.data;
+    },
+    updatePurchase: async (id: string | number, p: any) => {
+        const res = await api.put<Purchase>(`/purchases/${id}`, p);
+        return res.data;
+    },
+
+    deletePurchase: async (id: string | number) => {
+        await api.delete(`/purchases/${id}`);
+    },
+    getPurchaseTrash: async () => {
+        const res = await api.get<Purchase[]>("/purchases/trash");
+        return res.data;
+    },
+    restorePurchase: async (id: string | number) => {
+        await api.post(`/purchases/${id}/restore`);
+    },
+    forceDeletePurchase: async (id: string | number) => {
+        await api.delete(`/purchases/${id}/force`);
+    },
+    bulkDeletePurchases: async (ids: (string | number)[]) => {
+        await api.post("/purchases/bulk-delete", { ids });
+    },
+    bulkRestorePurchases: async (ids: (string | number)[]) => {
+        await api.post("/purchases/bulk-restore", { ids });
+    },
+    bulkForceDeletePurchases: async (ids: (string | number)[]) => {
+        await api.post("/purchases/bulk-force-delete", { ids });
     },
 
     getSuppliers: async () => {
@@ -55,8 +89,19 @@ export const storage = {
         const res = await api.get<WorkOrder[]>("/work-orders");
         return res.data;
     },
-    addWorkOrder: async (wo: any) => {
+    getWorkOrder: async (id: string | number) => {
+        const res = await api.get<WorkOrder>(`/work-orders/${id}`);
+        return res.data;
+    },
+    addWorkOrder: async (wo: FormData) => {
         const res = await api.post<WorkOrder>("/work-orders", wo);
+        return res.data;
+    },
+    updateWorkOrder: async (id: string | number, wo: FormData) => {
+        // Laravel doesn't handle PUT with multipart/form-data natively
+        // We use POST with _method spoofing
+        wo.append("_method", "PUT");
+        const res = await api.post<WorkOrder>(`/work-orders/${id}`, wo);
         return res.data;
     },
     updateWorkOrderStatus: async (
@@ -69,5 +114,67 @@ export const storage = {
             ...data,
         });
         return res.data;
+    },
+    deleteWorkOrder: async (id: string | number) => {
+        await api.delete(`/work-orders/${id}`);
+    },
+    getWorkOrderTrash: async () => {
+        const res = await api.get<WorkOrder[]>("/work-orders/trash");
+        return res.data;
+    },
+    restoreWorkOrder: async (id: string | number) => {
+        await api.post(`/work-orders/${id}/restore`);
+    },
+    forceDeleteWorkOrder: async (id: string | number) => {
+        await api.delete(`/work-orders/${id}/force`);
+    },
+    bulkDeleteWorkOrders: async (ids: (string | number)[]) => {
+        await api.post("/work-orders/bulk-delete", { ids });
+    },
+    bulkRestoreWorkOrders: async (ids: (string | number)[]) => {
+        await api.post("/work-orders/bulk-restore", { ids });
+    },
+    bulkForceDeleteWorkOrders: async (ids: (string | number)[]) => {
+        await api.post("/work-orders/bulk-force-delete", { ids });
+    },
+
+    getVouchers: async () => {
+        const res = await api.get<Voucher[]>("/vouchers");
+        return res.data;
+    },
+    addVoucher: async (v: FormData) => {
+        const res = await api.post<Voucher>("/vouchers", v);
+        return res.data;
+    },
+    getVoucher: async (id: string | number) => {
+        const res = await api.get<Voucher>(`/vouchers/${id}`);
+        return res.data;
+    },
+    updateVoucher: async (id: string | number, v: FormData) => {
+        v.append("_method", "PUT");
+        const res = await api.post<Voucher>(`/vouchers/${id}`, v);
+        return res.data;
+    },
+    deleteVoucher: async (id: string | number) => {
+        await api.delete(`/vouchers/${id}`);
+    },
+    getVoucherTrash: async () => {
+        const res = await api.get<Voucher[]>("/vouchers/trash");
+        return res.data;
+    },
+    restoreVoucher: async (id: string | number) => {
+        await api.post(`/vouchers/${id}/restore`);
+    },
+    forceDeleteVoucher: async (id: string | number) => {
+        await api.delete(`/vouchers/${id}/force`);
+    },
+    bulkDeleteVouchers: async (ids: (string | number)[]) => {
+        await api.post("/vouchers/bulk-delete", { ids });
+    },
+    bulkRestoreVouchers: async (ids: (string | number)[]) => {
+        await api.post("/vouchers/bulk-restore", { ids });
+    },
+    bulkForceDeleteVouchers: async (ids: (string | number)[]) => {
+        await api.post("/vouchers/bulk-force-delete", { ids });
     },
 };

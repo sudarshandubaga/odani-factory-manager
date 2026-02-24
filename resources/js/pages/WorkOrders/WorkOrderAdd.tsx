@@ -14,17 +14,21 @@ interface WorkOrderAddProps {
     onCancel: () => void;
     onSuccess: () => void;
     defaultWorkTypeId?: string;
+    editId?: string;
 }
 
 export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
     onCancel,
     onSuccess,
     defaultWorkTypeId,
+    editId,
 }) => {
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [workers, setWorkers] = useState<Worker[]>([]);
     const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
     const [allWorkOrders, setAllWorkOrders] = useState<WorkOrder[]>([]);
+    const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     // Selection State
     const [selWorkTypeId, setSelWorkTypeId] = useState("");
@@ -46,43 +50,78 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
 
     useEffect(() => {
         const fetchData = async () => {
-            const [p, w, wt, wo] = await Promise.all([
-                storage.getPurchases(),
-                storage.getWorkers(),
-                storage.getWorkTypes(),
-                storage.getWorkOrders(),
-            ]);
-            setPurchases(p);
-            setWorkers(w);
-            setWorkTypes(wt);
-            setAllWorkOrders(wo);
-            // Auto-select the work type from nav context
-            if (defaultWorkTypeId) {
-                setSelWorkTypeId(defaultWorkTypeId);
+            setLoading(true);
+            try {
+                const [p, w, wt, wo] = await Promise.all([
+                    storage.getPurchases(),
+                    storage.getWorkers(),
+                    storage.getWorkTypes(),
+                    storage.getWorkOrders(),
+                ]);
+                setPurchases(p);
+                setWorkers(w);
+                setWorkTypes(wt);
+                setAllWorkOrders(wo);
+
+                if (editId) {
+                    setIsEditing(true);
+                    const order = await storage.getWorkOrder(editId);
+                    setSelWorkTypeId(String(order.work_type_id));
+                    setSelPurchaseId(
+                        order.purchase_id ? String(order.purchase_id) : "",
+                    );
+                    setSelParentOrderId(
+                        order.parent_order_id
+                            ? String(order.parent_order_id)
+                            : "",
+                    );
+                    setSelWorkerId(String(order.worker_id));
+                    setDeadline(order.deadline);
+                    setNoOfPieces(
+                        order.no_of_pieces ? String(order.no_of_pieces) : "",
+                    );
+                    setRemarks(order.remarks || "");
+                    if (order.image_url || order.image) {
+                        setImagePreview(order.image_url || order.image || null);
+                    }
+                    if (order.items) {
+                        setSelectedItems(
+                            new Set(order.items.map((i) => String(i.id))),
+                        );
+                    }
+                } else if (defaultWorkTypeId) {
+                    setSelWorkTypeId(defaultWorkTypeId);
+                }
+            } catch (error) {
+                toast.error("Failed to load data");
+            } finally {
+                setLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [editId]);
 
-    // Reset fields when work type changes
+    // Reset fields when work type changes (ONLY when NOT initial editing load)
     useEffect(() => {
-        setSelPurchaseId("");
-        setSelParentOrderId("");
-        setSelWorkerId("");
-        setDeadline("");
-        setNoOfPieces("");
-        setRemarks("");
-        setSelectedItems(new Set());
-        setAvailableItems([]);
+        if (!isEditing || loading) return;
+        // setSelPurchaseId("");
+        // setSelParentOrderId("");
+        // setSelWorkerId("");
+        // setDeadline("");
+        // setNoOfPieces("");
+        // setRemarks("");
+        // setSelectedItems(new Set());
+        // setAvailableItems([]);
     }, [selWorkTypeId]);
 
-    // Update items when source changes
+    // Update available items when source changes
     useEffect(() => {
         if (selectedWorkType && !selectedWorkType.parent_id) {
             if (selPurchaseId) {
                 const p = purchases.find((x) => x.id == selPurchaseId);
                 setAvailableItems((p ? p.items : []) as SavedPurchaseItem[]);
-                setSelectedItems(new Set());
+                // Don't clear selected items if we just loaded them for editing
+                if (!isEditing) setSelectedItems(new Set());
             } else {
                 setAvailableItems([]);
             }
@@ -90,7 +129,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
             if (selParentOrderId) {
                 const po = allWorkOrders.find((o) => o.id == selParentOrderId);
                 setAvailableItems((po ? po.items : []) as SavedPurchaseItem[]);
-                setSelectedItems(new Set());
+                if (!isEditing) setSelectedItems(new Set());
             } else {
                 setAvailableItems([]);
             }
@@ -158,12 +197,17 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
         }
 
         try {
-            await storage.addWorkOrder(formData);
-            toast.success("Job order created successfully!");
+            if (editId) {
+                await storage.updateWorkOrder(editId, formData);
+                toast.success("Job order updated successfully!");
+            } else {
+                await storage.addWorkOrder(formData);
+                toast.success("Job order created successfully!");
+            }
             onSuccess();
         } catch (error: any) {
             toast.error(
-                error.response?.data?.message || "Failed to create job order",
+                error.response?.data?.message || "Failed to save job order",
             );
         }
     };
@@ -179,7 +223,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
     return (
         <div className="bg-white shadow rounded-lg p-6 max-w-4xl mx-auto">
             <h3 className="text-xl font-bold mb-8 text-gray-900 border-b pb-4">
-                Create Work Order
+                {isEditing ? "Edit" : "Create"} Work Order
             </h3>
 
             {/* 1. Work Type */}
@@ -462,7 +506,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                             }
                             className="px-8 py-2.5 bg-brand-600 text-white rounded-lg font-bold shadow-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95 transition-all"
                         >
-                            Create Job Order
+                            {isEditing ? "Update" : "Create"} Job Order
                         </button>
                     </div>
                 </div>

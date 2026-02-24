@@ -14,11 +14,13 @@ import { MasterData } from "./pages/MasterData/index";
 import {
     WorkOrdersPageRoute,
     WorkOrderAddRoute,
+    WorkOrderEditRoute,
 } from "./pages/WorkOrders/index";
 import { WorkOrderReport } from "./pages/Reports/WorkOrderReport";
 import { OverdueWorkOrdersReport } from "./pages/Reports/OverdueWorkOrdersReport";
 import { LedgerReport } from "./pages/Reports/LedgerReport";
 import { ProfilePage } from "./pages/Profile/index";
+import { VoucherList } from "./pages/Vouchers/VoucherList";
 import { ExpiredPage } from "./pages/Error/Expired";
 import { Toaster } from "react-hot-toast";
 
@@ -132,6 +134,14 @@ const AppContent: React.FC = () => {
                     }
                 />
                 <Route
+                    path="/work-orders/:id/edit"
+                    element={
+                        <ProtectedRoute>
+                            <WorkOrderEditRoute />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
                     path="/work-orders/:id/print"
                     element={<WorkOrderReport />}
                 />
@@ -156,6 +166,14 @@ const AppContent: React.FC = () => {
                     element={
                         <ProtectedRoute>
                             <LedgerReport />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/vouchers"
+                    element={
+                        <ProtectedRoute>
+                            <VoucherList />
                         </ProtectedRoute>
                     }
                 />

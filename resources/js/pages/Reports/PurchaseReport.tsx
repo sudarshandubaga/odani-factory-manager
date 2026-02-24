@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { storage } from "../../services/storage";
 import { COMPANY_NAME, COMPANY_ADDRESS, TERMS } from "../../constants";
-import { Purchase, Supplier } from "../../types";
+import { Purchase, Worker } from "../../types";
 
 export const PurchaseReport: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [purchase, setPurchase] = useState<Purchase | null>(null);
-    const [supplier, setSupplier] = useState<Supplier | null>(null);
+    const [worker, setWorker] = useState<Worker | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -18,8 +18,8 @@ export const PurchaseReport: React.FC = () => {
                 console.log("foundPurchase", foundPurchase);
                 setPurchase(foundPurchase);
 
-                // Supplier is already included in the response from the backend
-                setSupplier(foundPurchase.supplier || null);
+                // Worker is already included in the response from the backend
+                setWorker(foundPurchase.worker || null);
             } catch (error) {
                 console.error("Error fetching purchase", error);
             } finally {
@@ -68,9 +68,9 @@ export const PurchaseReport: React.FC = () => {
 
                 <div className="mb-6">
                     <h3 className="font-bold text-lg border-b border-gray-300 inline-block mb-2">
-                        Supplier Details
+                        Worker Details
                     </h3>
-                    <p className="text-lg">{supplier?.name}</p>
+                    <p className="text-lg">{worker?.name}</p>
                 </div>
 
                 <table className="w-full border-collapse border border-black mb-8">
@@ -132,6 +132,82 @@ export const PurchaseReport: React.FC = () => {
                         </tr>
                     </tfoot>
                 </table>
+
+                {purchase.vouchers && purchase.vouchers.length > 0 && (
+                    <div className="mb-8">
+                        <h3 className="font-bold text-lg border-b border-gray-300 inline-block mb-2">
+                            Voucher History
+                        </h3>
+                        <table className="w-full border-collapse border border-black text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="border border-black px-2 py-1 text-left">
+                                        Date
+                                    </th>
+                                    <th className="border border-black px-2 py-1 text-left">
+                                        Voucher No
+                                    </th>
+                                    <th className="border border-black px-2 py-1 text-right">
+                                        Received Pcs
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {purchase.vouchers.map((v) => (
+                                    <tr key={v.id}>
+                                        <td className="border border-black px-2 py-1">
+                                            {v.date}
+                                        </td>
+                                        <td className="border border-black px-2 py-1">
+                                            {v.voucher_no}
+                                        </td>
+                                        <td className="border border-black px-2 py-1 text-right font-bold">
+                                            {v.total_received}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr className="bg-gray-50 font-bold">
+                                    <td
+                                        className="border border-black px-2 py-1 text-right"
+                                        colSpan={2}
+                                    >
+                                        Total Received (Pcs)
+                                    </td>
+                                    <td className="border border-black px-2 py-1 text-right">
+                                        {purchase.vouchers.reduce(
+                                            (sum, v) =>
+                                                sum + Number(v.total_received),
+                                            0,
+                                        )}
+                                    </td>
+                                </tr>
+                                <tr className="bg-gray-50 font-bold">
+                                    <td
+                                        className="border border-black px-2 py-1 text-right"
+                                        colSpan={2}
+                                    >
+                                        Total Due (Pcs)
+                                    </td>
+                                    <td className="border border-black px-2 py-1 text-right">
+                                        {(purchase.items || []).reduce(
+                                            (sum, i) =>
+                                                sum + Number(i.pieces_round),
+                                            0,
+                                        ) -
+                                            purchase.vouchers.reduce(
+                                                (sum, v) =>
+                                                    sum +
+                                                    Number(v.total_received),
+                                                0,
+                                            )}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-8 mt-12">
                     <div>

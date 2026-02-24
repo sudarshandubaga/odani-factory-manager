@@ -10,7 +10,7 @@ class WorkOrderController extends Controller
     public function index(Request $request)
     {
         return $request->user()->tenant->workOrders()
-            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'childOrders'])
+            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'childOrders', 'vouchers'])
             ->latest()
             ->get();
     }
@@ -93,26 +93,102 @@ class WorkOrderController extends Controller
     {
         $workOrder = $request->user()->tenant->workOrders()->findOrFail($id);
 
-        // Check if child jobs exist
-        if ($workOrder->childOrders()->exists()) {
-            return response()->json([
-                'message' => 'Cannot change status of a job that has child job orders.'
-            ], 422);
-        }
-
         $validated = $request->validate([
-            'status' => 'required|in:active,completed',
+            'work_type_id' => 'nullable|exists:work_types,id',
+            'purchase_id' => 'nullable|exists:purchases,id',
+            'parent_order_id' => 'nullable|exists:work_orders,id',
+            'worker_id' => 'nullable|exists:workers,id',
+            'item_ids' => 'nullable|array',
+            'item_ids.*' => 'exists:purchase_items,id',
+            'deadline' => 'nullable|date',
+            'image' => 'nullable',
+            'no_of_pieces' => 'nullable|integer',
+            'remarks' => 'nullable|string',
+            'status' => 'nullable|in:active,completed',
             'received_pcs' => 'nullable|integer',
             'notes' => 'nullable|string',
         ]);
 
-        $workOrder->update($validated);
+        // If status or received pieces are changing, check child orders? 
+        // For now let's focus on basic editing as requested.
 
-        if ($validated['status'] === 'completed') {
-            $workOrder->items()->update(['status' => 'completed']);
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('work-orders', 'public');
+            $imagePath = 'storage/' . $imagePath;
+            $workOrder->image = $imagePath;
         }
 
-        return $workOrder->load(['purchase', 'worker', 'workType', 'items']);
+        $updateData = [];
+        $fields = ['work_type_id', 'purchase_id', 'parent_order_id', 'worker_id', 'deadline', 'no_of_pieces', 'remarks', 'status', 'received_pcs', 'notes'];
+        foreach ($fields as $field) {
+            if ($request->has($field)) {
+                $updateData[$field] = $validated[$field];
+            }
+        }
+
+        if (!empty($validated['parent_order_id'])) {
+            $parentOrder = \App\Models\WorkOrder::findOrFail($validated['parent_order_id']);
+            $updateData['purchase_id'] = $parentOrder->purchase_id;
+        }
+
+        $workOrder->update($updateData);
+
+        if (isset($validated['item_ids'])) {
+            // Re-sync items: pending the old ones, assigning the new ones
+            $workOrder->items()->update(['status' => 'pending']);
+            $workOrder->items()->sync($validated['item_ids']);
+            \App\Models\PurchaseItem::whereIn('id', $validated['item_ids'])->update(['status' => 'assigned']);
+        }
+
+        return $workOrder->load(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'vouchers']);
+    }
+
+    public function trash(Request $request)
+    {
+        return $request->user()->tenant->workOrders()
+            ->onlyTrashed()
+            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'childOrders', 'vouchers'])
+            ->latest()
+            ->get();
+    }
+
+    public function restore(Request $request, string $id)
+    {
+        $workOrder = $request->user()->tenant->workOrders()->onlyTrashed()->findOrFail($id);
+        $workOrder->restore();
+        return response()->json(['message' => 'Work order restored']);
+    }
+
+    public function forceDelete(Request $request, string $id)
+    {
+        $workOrder = $request->user()->tenant->workOrders()->withTrashed()->findOrFail($id);
+        $workOrder->forceDelete();
+        return response()->json(['message' => 'Work order permanently deleted']);
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate(['ids' => 'required|array']);
+        $orders = $request->user()->tenant->workOrders()->whereIn('id', $request->ids)->get();
+        foreach ($orders as $order) {
+            $order->items()->update(['status' => 'pending']);
+            $order->delete();
+        }
+        return response()->json(['message' => 'Work orders deleted']);
+    }
+
+    public function bulkRestore(Request $request)
+    {
+        $request->validate(['ids' => 'required|array']);
+        $request->user()->tenant->workOrders()->onlyTrashed()->whereIn('id', $request->ids)->restore();
+        return response()->json(['message' => 'Work orders restored']);
+    }
+
+    public function bulkForceDelete(Request $request)
+    {
+        $request->validate(['ids' => 'required|array']);
+        $request->user()->tenant->workOrders()->withTrashed()->whereIn('id', $request->ids)->forceDelete();
+        return response()->json(['message' => 'Work orders permanently deleted']);
     }
 
     public function destroy(Request $request, string $id)
@@ -121,6 +197,6 @@ class WorkOrderController extends Controller
         // Reset item status before deleting
         $workOrder->items()->update(['status' => 'pending']);
         $workOrder->delete();
-        return response()->json(['message' => 'Work order deleted']);
+        return response()->json(['message' => 'Work order moved to trash']);
     }
 }

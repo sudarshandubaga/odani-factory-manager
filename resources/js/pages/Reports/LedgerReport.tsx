@@ -37,31 +37,119 @@ export const LedgerReport: React.FC = () => {
     const getWorkerName = (id: any) =>
         workers.find((w) => w.id == id)?.name || "Unknown";
 
-    const filteredOrders = workOrders.filter((o) => {
-        const date = o.created_at?.split("T")[0];
-        if (fromDate && date < fromDate) return false;
-        if (toDate && date > toDate) return false;
-        if (selectedWorkerId && String(o.worker_id) !== selectedWorkerId)
-            return false;
-        if (selectedStatus !== "all" && o.status !== selectedStatus)
-            return false;
+    // 1. Combine all Assignments (Orders) and Vouchers into a single flat list
+    const allActivities: any[] = [];
+    const orders = [...purchases, ...workOrders];
+
+    orders.forEach((order) => {
+        // Only include if worker matches filter
+        if (selectedWorkerId && String(order.worker_id) !== selectedWorkerId)
+            return;
+
+        const orderDate =
+            "created_at" in order && typeof order.created_at === "string"
+                ? order.created_at.split("T")[0]
+                : (order as any).date;
+
+        const orderId = order.id;
+        const totalPieces =
+            (order as any).total_pieces || (order as any).no_of_pieces || 0;
+        const workerName = order.worker?.name || getWorkerName(order.worker_id);
+        const sourceName = "total_pieces" in order ? "Khilai" : "Work Order";
+        const details =
+            "total_pieces" in order
+                ? `Khilai #${(order as any).invoice_no}`
+                : `Job #${String(orderId).slice(-6).toUpperCase()}`;
+
+        // Assignment Entry
+        allActivities.push({
+            date: orderDate,
+            id: orderId,
+            displayId:
+                "total_pieces" in order
+                    ? (order as any).invoice_no
+                    : String(orderId).slice(-6).toUpperCase(),
+            type: "Assignment",
+            source: sourceName,
+            workerName,
+            details,
+            assigned: Number(totalPieces),
+            received: 0,
+            sortPriority: 1, // Assignment first on same day
+            orderId: orderId,
+            deadline: (order as any).deadline || "—",
+        });
+
+        // Voucher Entries
+        order.vouchers?.forEach((v) => {
+            allActivities.push({
+                date: v.date,
+                id: v.id,
+                displayId: v.voucher_no,
+                type: "Voucher",
+                source: sourceName,
+                workerName,
+                details: `Voucher ${v.voucher_no} (${details})`,
+                assigned: 0,
+                received: Number(v.total_received),
+                sortPriority: 2,
+                orderId: orderId,
+                deadline: "—",
+            });
+        });
+    });
+
+    // 2. Sort activities by date and priority
+    allActivities.sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.sortPriority - b.sortPriority;
+    });
+
+    // 3. Calculate running stats
+    const jobReceivedMap: Record<string, number> = {};
+    const jobAssignedMap: Record<string, number> = {};
+    let runningBalance = 0;
+
+    const processedLedger = allActivities.map((activity) => {
+        const oId = activity.orderId;
+
+        // Update job-specific stats
+        jobAssignedMap[oId] = (jobAssignedMap[oId] || 0) + activity.assigned;
+        jobReceivedMap[oId] = (jobReceivedMap[oId] || 0) + activity.received;
+
+        const jobTotalAssigned = jobAssignedMap[oId];
+        const jobTotalReceived = jobReceivedMap[oId];
+
+        // Update account-wide balance (Received - Assigned)
+        runningBalance = runningBalance + activity.received - activity.assigned;
+
+        return {
+            ...activity,
+            completed: jobTotalReceived,
+            due: Math.max(0, jobTotalAssigned - jobTotalReceived),
+            balance: runningBalance,
+        };
+    });
+
+    // 4. Apply final display filters
+    const displayedLedger = processedLedger.filter((row) => {
+        if (fromDate && row.date < fromDate) return false;
+        if (toDate && row.date > toDate) return false;
+        // Status filter (logic: if any status other than 'all' is picked, match against original job status)
+        if (selectedStatus !== "all") {
+            const originalOrder = orders.find((o) => o.id === row.orderId);
+            const status = (originalOrder as any)?.status || "active"; // Khilai defaults to active
+            if (status !== selectedStatus) return false;
+        }
         return true;
     });
 
-    const completedOrders = filteredOrders.filter(
-        (o) => o.status === "completed",
-    );
-    const activeOrders = filteredOrders.filter((o) => o.status === "active");
-
-    const totalAssigned = filteredOrders.reduce(
-        (s, o) => s + (o.no_of_pieces || 0),
-        0,
-    );
-    const totalCompleted = completedOrders.reduce(
-        (s, o) => s + (o.received_pcs || 0),
-        0,
-    );
-    const totalDue = completedOrders.reduce((s, o) => s + (o.due_pcs || 0), 0);
+    const totalAssigned = displayedLedger.reduce((s, a) => s + a.assigned, 0);
+    const totalReceived = displayedLedger.reduce((s, a) => s + a.received, 0);
+    const netBalance =
+        displayedLedger.length > 0
+            ? displayedLedger[displayedLedger.length - 1].balance
+            : 0;
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
@@ -164,10 +252,10 @@ export const LedgerReport: React.FC = () => {
                 <div className="grid grid-cols-4 gap-4 mb-8 text-center text-sm">
                     <div className="border-2 border-black p-3 rounded">
                         <div className="text-xs uppercase font-bold text-gray-500 mb-1">
-                            Total Orders
+                            Total Entries
                         </div>
                         <div className="text-2xl font-black">
-                            {filteredOrders.length}
+                            {displayedLedger.length}
                         </div>
                     </div>
                     <div className="border-2 border-black p-3 rounded">
@@ -180,126 +268,144 @@ export const LedgerReport: React.FC = () => {
                     </div>
                     <div className="border-2 border-green-700 bg-green-50 p-3 rounded">
                         <div className="text-xs uppercase font-bold text-green-700 mb-1">
-                            Completed
+                            Total Received
                         </div>
                         <div className="text-2xl font-black text-green-800">
-                            {totalCompleted}
+                            {totalReceived}
                         </div>
                     </div>
                     <div className="border-2 border-red-600 bg-red-50 p-3 rounded">
                         <div className="text-xs uppercase font-bold text-red-600 mb-1">
-                            Due Pieces
+                            Net Balance (Pcs)
                         </div>
-                        <div className="text-2xl font-black text-red-700">
-                            {totalDue}
+                        <div
+                            className={`text-2xl font-black ${netBalance < 0 ? "text-red-700" : netBalance > 0 ? "text-green-700" : "text-gray-900"}`}
+                        >
+                            {netBalance}
                         </div>
                     </div>
                 </div>
 
-                {/* Work Orders Table */}
-                <table className="w-full border-collapse border border-black text-sm mb-8">
+                {/* Ledger Table */}
+                <table className="w-full border-collapse border border-black text-[11px] mb-8">
                     <thead>
                         <tr className="bg-gray-100">
-                            <th className="border border-black px-2 py-1 text-left">
-                                Order ID
+                            <th className="border border-black px-2 py-2 text-left text-[10px] uppercase font-black w-16">
+                                ID/No
                             </th>
-                            <th className="border border-black px-2 py-1 text-left">
+                            <th className="border border-black px-2 py-2 text-left text-[10px] uppercase font-black w-24">
                                 Date
                             </th>
-                            <th className="border border-black px-2 py-1 text-left">
-                                Worker
+                            <th className="border border-black px-2 py-2 text-left text-[10px] uppercase font-black w-32">
+                                Type/Worker
                             </th>
-                            <th className="border border-black px-2 py-1 text-center">
-                                Deadline
+                            <th className="border border-black px-2 py-2 text-left text-[10px] uppercase font-black">
+                                Details
                             </th>
-                            <th className="border border-black px-2 py-1 text-center">
+                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-20">
                                 Assigned
                             </th>
-                            <th className="border border-black px-2 py-1 text-center">
+                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-20">
+                                Received
+                            </th>
+                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-20">
                                 Completed
                             </th>
-                            <th className="border border-black px-2 py-1 text-center">
+                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-20">
                                 Due
                             </th>
-                            <th className="border border-black px-2 py-1 text-center">
-                                Status
+                            <th className="border border-black px-2 py-2 text-right text-[10px] uppercase font-black bg-gray-50 w-24">
+                                Balance
                             </th>
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredOrders.map((order) => (
+                        {displayedLedger.map((row, idx) => (
                             <tr
-                                key={order.id}
-                                className={
-                                    order.status === "completed"
-                                        ? "bg-green-50"
-                                        : ""
-                                }
+                                key={`${row.type}-${row.id}-${idx}`}
+                                className={`hover:bg-gray-50 transition-colors ${row.type === "Assignment" ? "bg-gray-50/50" : ""}`}
                             >
-                                <td className="border border-black px-2 py-1 font-mono text-xs">
-                                    #{String(order.id).slice(-6).toUpperCase()}
+                                <td className="border border-black px-2 py-1.5 font-mono">
+                                    {row.displayId}
                                 </td>
-                                <td className="border border-black px-2 py-1 text-xs">
-                                    {order.created_at?.split("T")[0]}
+                                <td className="border border-black px-2 py-1.5 font-medium">
+                                    {row.date}
                                 </td>
-                                <td className="border border-black px-2 py-1">
-                                    {getWorkerName(order.worker_id)}
+                                <td className="border border-black px-2 py-1.5">
+                                    <div className="flex flex-col gap-0.5">
+                                        <span
+                                            className={`text-[8px] font-black uppercase px-1 py-0 rounded w-fit ${row.type === "Assignment" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}
+                                        >
+                                            {row.type}
+                                        </span>
+                                        <span className="font-bold leading-tight">
+                                            {row.workerName}
+                                        </span>
+                                    </div>
                                 </td>
-                                <td className="border border-black px-2 py-1 text-center">
-                                    {order.deadline}
+                                <td className="border border-black px-2 py-1.5 text-gray-600">
+                                    {row.details}
                                 </td>
-                                <td className="border border-black px-2 py-1 text-center font-bold">
-                                    {order.no_of_pieces ?? "—"}
+                                <td className="border border-black px-2 py-1.5 text-center font-bold">
+                                    {row.assigned > 0 ? row.assigned : "—"}
                                 </td>
-                                <td className="border border-black px-2 py-1 text-center text-green-700 font-bold">
-                                    {order.status === "completed"
-                                        ? (order.received_pcs ?? "—")
-                                        : "—"}
+                                <td className="border border-black px-2 py-1.5 text-center font-bold">
+                                    {row.received > 0 ? (
+                                        <span className="text-emerald-600">
+                                            +{row.received}
+                                        </span>
+                                    ) : (
+                                        "—"
+                                    )}
                                 </td>
-                                <td className="border border-black px-2 py-1 text-center text-red-600 font-bold">
-                                    {order.status === "completed"
-                                        ? (order.due_pcs ?? "0")
-                                        : "—"}
+                                <td className="border border-black px-2 py-1.5 text-center text-brand-600 font-black">
+                                    {row.completed}
                                 </td>
-                                <td className="border border-black px-2 py-1 text-center">
-                                    <span
-                                        className={`text-xs font-bold px-1.5 py-0.5 rounded ${order.status === "completed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
-                                    >
-                                        {order.status.toUpperCase()}
-                                    </span>
+                                <td className="border border-black px-2 py-1.5 text-center text-red-600 font-black">
+                                    {row.due}
+                                </td>
+                                <td
+                                    className={`border border-black px-2 py-1.5 text-right font-black bg-gray-50/50 ${row.balance < 0 ? "text-red-700" : row.balance > 0 ? "text-emerald-700" : "text-gray-900"}`}
+                                >
+                                    {row.balance}
                                 </td>
                             </tr>
                         ))}
-                        {filteredOrders.length === 0 && (
+                        {displayedLedger.length === 0 && (
                             <tr>
                                 <td
-                                    colSpan={8}
-                                    className="border border-black px-2 py-4 text-center text-gray-400 italic"
+                                    colSpan={9}
+                                    className="border border-black px-2 py-8 text-center text-gray-400 italic"
                                 >
-                                    No work orders found for the selected
-                                    period.
+                                    No ledger entries found for the selected
+                                    filters.
                                 </td>
                             </tr>
                         )}
                     </tbody>
                     <tfoot>
-                        <tr className="bg-gray-100 font-bold">
+                        <tr className="bg-gray-100 font-black text-gray-900">
                             <td
                                 colSpan={4}
-                                className="border border-black px-2 py-1 text-right uppercase text-xs tracking-wider"
+                                className="border border-black px-4 py-2 text-right uppercase tracking-widest text-[10px]"
                             >
                                 Totals
                             </td>
-                            <td className="border border-black px-2 py-1 text-center">
+                            <td className="border border-black px-2 py-2 text-center">
                                 {totalAssigned}
                             </td>
-                            <td className="border border-black px-2 py-1 text-center text-green-700">
-                                {totalCompleted}
+                            <td className="border border-black px-2 py-2 text-center text-emerald-700">
+                                {totalReceived}
                             </td>
-                            <td className="border border-black px-2 py-1 text-center text-red-600">
-                                {totalDue}
+                            <td
+                                colSpan={2}
+                                className="border border-black bg-gray-200"
+                            ></td>
+                            <td
+                                className={`border border-black px-2 py-2 text-right ${netBalance < 0 ? "text-red-700" : netBalance > 0 ? "text-emerald-700" : ""}`}
+                            >
+                                {netBalance}
                             </td>
-                            <td className="border border-black px-2 py-1"></td>
                         </tr>
                     </tfoot>
                 </table>

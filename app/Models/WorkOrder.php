@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WorkOrder extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'tenant_id',
         'purchase_id',
@@ -67,5 +69,10 @@ class WorkOrder extends Model
     public function childOrders()
     {
         return $this->hasMany(WorkOrder::class, 'parent_order_id');
+    }
+
+    public function vouchers()
+    {
+        return $this->hasMany(Voucher::class);
     }
 }

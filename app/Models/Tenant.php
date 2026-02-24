@@ -46,4 +46,9 @@ class Tenant extends Model
     {
         return $this->hasMany(WorkOrder::class);
     }
+
+    public function vouchers()
+    {
+        return $this->hasMany(Voucher::class);
+    }
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\WorkTypeController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\WorkOrderController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\VoucherController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -22,6 +23,27 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('suppliers', SupplierController::class);
     Route::apiResource('workers', WorkerController::class);
     Route::apiResource('work-types', WorkTypeController::class);
+    Route::get('purchases/trash', [PurchaseController::class, 'trash']);
+    Route::post('purchases/{id}/restore', [PurchaseController::class, 'restore']);
+    Route::delete('purchases/{id}/force', [PurchaseController::class, 'forceDelete']);
+    Route::post('purchases/bulk-delete', [PurchaseController::class, 'bulkDelete']);
+    Route::post('purchases/bulk-restore', [PurchaseController::class, 'bulkRestore']);
+    Route::post('purchases/bulk-force-delete', [PurchaseController::class, 'bulkForceDelete']);
     Route::apiResource('purchases', PurchaseController::class);
+
+    Route::get('work-orders/trash', [WorkOrderController::class, 'trash']);
+    Route::post('work-orders/{id}/restore', [WorkOrderController::class, 'restore']);
+    Route::delete('work-orders/{id}/force', [WorkOrderController::class, 'forceDelete']);
+    Route::post('work-orders/bulk-delete', [WorkOrderController::class, 'bulkDelete']);
+    Route::post('work-orders/bulk-restore', [WorkOrderController::class, 'bulkRestore']);
+    Route::post('work-orders/bulk-force-delete', [WorkOrderController::class, 'bulkForceDelete']);
     Route::apiResource('work-orders', WorkOrderController::class);
+
+    Route::get('vouchers/trash', [VoucherController::class, 'trash']);
+    Route::post('vouchers/{id}/restore', [VoucherController::class, 'restore']);
+    Route::delete('vouchers/{id}/force', [VoucherController::class, 'forceDelete']);
+    Route::post('vouchers/bulk-delete', [VoucherController::class, 'bulkDelete']);
+    Route::post('vouchers/bulk-restore', [VoucherController::class, 'bulkRestore']);
+    Route::post('vouchers/bulk-force-delete', [VoucherController::class, 'bulkForceDelete']);
+    Route::apiResource('vouchers', VoucherController::class);
 });
