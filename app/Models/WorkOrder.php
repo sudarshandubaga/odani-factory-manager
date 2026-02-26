@@ -75,4 +75,9 @@ class WorkOrder extends Model
     {
         return $this->hasMany(Voucher::class);
     }
+
+    public function paymentVouchers()
+    {
+        return $this->hasMany(PaymentVoucher::class);
+    }
 }

@@ -10,7 +10,7 @@ class WorkOrderController extends Controller
     public function index(Request $request)
     {
         return $request->user()->tenant->workOrders()
-            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'childOrders', 'vouchers'])
+            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'childOrders', 'vouchers', 'paymentVouchers'])
             ->latest()
             ->get();
     }
@@ -140,14 +140,14 @@ class WorkOrderController extends Controller
             \App\Models\PurchaseItem::whereIn('id', $validated['item_ids'])->update(['status' => 'assigned']);
         }
 
-        return $workOrder->load(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'vouchers']);
+        return $workOrder->load(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'vouchers', 'paymentVouchers']);
     }
 
     public function trash(Request $request)
     {
         return $request->user()->tenant->workOrders()
             ->onlyTrashed()
-            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'childOrders', 'vouchers'])
+            ->with(['purchase', 'worker', 'workType', 'items', 'parentOrder', 'childOrders', 'vouchers', 'paymentVouchers'])
             ->latest()
             ->get();
     }

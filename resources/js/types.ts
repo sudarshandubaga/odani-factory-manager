@@ -122,3 +122,19 @@ export interface Voucher {
     image?: string;
     created_at: string;
 }
+
+export interface PaymentVoucher {
+    id: string;
+    voucher_no: string;
+    date: string;
+    type: "khilai" | "work-order";
+    work_order_id?: string | null;
+    workOrder?: WorkOrder;
+    khilai_id?: string | null;
+    khilai?: Purchase;
+    price: number;
+    total_due: number;
+    description?: string;
+    created_at: string;
+}
+

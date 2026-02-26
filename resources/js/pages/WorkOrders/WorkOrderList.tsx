@@ -13,6 +13,7 @@ import {
     Square,
 } from "lucide-react";
 import { NewVoucherModal } from "../../components/NewVoucherModal";
+import { NewPaymentVoucherModal } from "../../components/NewPaymentVoucherModal";
 import { List, RowComponentProps } from "react-window";
 
 import { toast } from "react-hot-toast";
@@ -36,7 +37,11 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
     const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+    const [isPaymentVoucherModalOpen, setIsPaymentVoucherModalOpen] =
+        useState(false);
     const [voucherInitialData, setVoucherInitialData] = useState<any>(null);
+    const [paymentVoucherInitialData, setPaymentVoucherInitialData] =
+        useState<any>(null);
     const [isTrashView, setIsTrashView] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -393,7 +398,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                                         type: "work-order",
                                         id: order.id,
                                         totalDue: totalDue > 0 ? totalDue : 0,
-                                        description: `Payment for Work Order #${String(order.id).slice(-6).toUpperCase()}`,
+                                        description: `Return for Work Order #${String(order.id).slice(-6).toUpperCase()}`,
                                     });
                                     setIsVoucherModalOpen(true);
                                 }}
@@ -401,6 +406,35 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                                 title="Create Voucher"
                             >
                                 <CreditCard className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPaymentVoucherInitialData({
+                                        type: "work-order",
+                                        id: order.id,
+                                        totalDue: 0,
+                                        description: `Payment for Work Order #${String(order.id).slice(-6).toUpperCase()}`,
+                                    });
+                                    setIsPaymentVoucherModalOpen(true);
+                                }}
+                                className="p-2 text-blue-500 hover:text-blue-700"
+                                title="Create Payment Voucher"
+                            >
+                                <svg
+                                    className="w-5 h-5"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                </svg>
                             </button>
                             <button
                                 onClick={() => handleDelete(order.id)}
@@ -588,6 +622,16 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                     fetchData();
                 }}
                 initialData={voucherInitialData}
+            />
+
+            <NewPaymentVoucherModal
+                isOpen={isPaymentVoucherModalOpen}
+                onClose={() => setIsPaymentVoucherModalOpen(false)}
+                onSave={() => {
+                    setIsPaymentVoucherModalOpen(false);
+                    fetchData();
+                }}
+                initialData={paymentVoucherInitialData}
             />
         </div>
     );

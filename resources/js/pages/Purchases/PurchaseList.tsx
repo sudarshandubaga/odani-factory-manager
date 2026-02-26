@@ -19,6 +19,7 @@ import {
     Square,
 } from "lucide-react";
 import { NewVoucherModal } from "../../components/NewVoucherModal";
+import { NewPaymentVoucherModal } from "../../components/NewPaymentVoucherModal";
 import { toast } from "react-hot-toast";
 
 interface PurchaseListProps {
@@ -34,7 +35,11 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
     const [selectedPurchaseDetails, setSelectedPurchaseDetails] =
         useState<Purchase | null>(null);
     const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+    const [isPaymentVoucherModalOpen, setIsPaymentVoucherModalOpen] =
+        useState(false);
     const [voucherInitialData, setVoucherInitialData] = useState<any>(null);
+    const [paymentVoucherInitialData, setPaymentVoucherInitialData] =
+        useState<any>(null);
     const [isTrashView, setIsTrashView] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -677,6 +682,86 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                         </div>
                                     </div>
                                 )}
+                            {(selectedPurchaseDetails as any).paymentVouchers &&
+                                (selectedPurchaseDetails as any).paymentVouchers
+                                    .length > 0 && (
+                                    <div className="space-y-3 pt-4 border-t border-dashed">
+                                        <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                            <svg
+                                                className="w-4 h-4 text-blue-600"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="24"
+                                                height="24"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            >
+                                                <line
+                                                    x1="12"
+                                                    y1="1"
+                                                    x2="12"
+                                                    y2="23"
+                                                ></line>
+                                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                            </svg>{" "}
+                                            Payment History
+                                        </h4>
+                                        <div className="bg-blue-50/30 rounded-xl border border-blue-100 divide-y divide-blue-100">
+                                            {(
+                                                selectedPurchaseDetails as any
+                                            ).paymentVouchers.map((v: any) => (
+                                                <div
+                                                    key={v.id}
+                                                    className="p-3 flex justify-between items-center hover:bg-blue-50/50 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="bg-blue-100 p-2 rounded-lg">
+                                                            <svg
+                                                                className="w-4 h-4 text-blue-700"
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                width="24"
+                                                                height="24"
+                                                                viewBox="0 0 24 24"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                strokeWidth="2"
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                            >
+                                                                <line
+                                                                    x1="12"
+                                                                    y1="1"
+                                                                    x2="12"
+                                                                    y2="23"
+                                                                ></line>
+                                                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                                            </svg>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-gray-900">
+                                                                {v.voucher_no}
+                                                            </p>
+                                                            <p className="text-[10px] text-gray-500 font-medium">
+                                                                {v.date}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-sm font-black text-blue-700">
+                                                            ₹{v.price}
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-400 uppercase font-black">
+                                                            Paid
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                         </div>
                         <div className="p-4 bg-gray-50 border-t flex justify-between items-center">
                             <p className="text-xs text-gray-400">
@@ -696,6 +781,40 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                 </button>
                                 <button
                                     onClick={() => {
+                                        setPaymentVoucherInitialData({
+                                            type: "khilai",
+                                            id: selectedPurchaseDetails.id,
+                                            totalDue: 0,
+                                            description: `Payment for Khilai Inv #${selectedPurchaseDetails.invoice_no}`,
+                                        });
+                                        setIsPaymentVoucherModalOpen(true);
+                                    }}
+                                    className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 shadow-sm flex items-center gap-2"
+                                >
+                                    <svg
+                                        className="w-4 h-4"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <line
+                                            x1="12"
+                                            y1="1"
+                                            x2="12"
+                                            y2="23"
+                                        ></line>
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                    </svg>{" "}
+                                    Create Payment
+                                </button>
+                                <button
+                                    onClick={() => {
                                         const totalReceived =
                                             selectedPurchaseDetails.vouchers?.reduce(
                                                 (sum, v) =>
@@ -712,14 +831,14 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                             id: selectedPurchaseDetails.id,
                                             totalDue:
                                                 totalDue > 0 ? totalDue : 0,
-                                            description: `Payment for Khilai Inv #${selectedPurchaseDetails.invoice_no}`,
+                                            description: `Return for Khilai Inv #${selectedPurchaseDetails.invoice_no}`,
                                         });
                                         setIsVoucherModalOpen(true);
                                     }}
                                     className="px-6 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2"
                                 >
-                                    <CreditCard className="w-4 h-4" /> Create
-                                    Voucher
+                                    <CreditCard className="w-4 h-4" /> Return
+                                    pieces
                                 </button>
                                 <button
                                     onClick={() => {
@@ -732,14 +851,24 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                     }}
                                     className="px-6 py-2 bg-brand-600 text-white rounded-md text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                                 >
-                                    <Printer className="w-4 h-4" /> Print Full
-                                    Report
+                                    <Printer className="w-4 h-4" /> Print
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+
+            <NewPaymentVoucherModal
+                isOpen={isPaymentVoucherModalOpen}
+                onClose={() => setIsPaymentVoucherModalOpen(false)}
+                onSave={() => {
+                    setIsPaymentVoucherModalOpen(false);
+                    fetchData();
+                    setSelectedPurchaseDetails(null);
+                }}
+                initialData={paymentVoucherInitialData}
+            />
 
             <NewVoucherModal
                 isOpen={isVoucherModalOpen}

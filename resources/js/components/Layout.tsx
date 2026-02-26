@@ -261,6 +261,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                                             icon: Receipt,
                                         },
                                         {
+                                            to: "/payment-vouchers",
+                                            label: "Payment Vouchers",
+                                            icon: Receipt,
+                                        },
+                                        {
                                             to: "/reports/overdue",
                                             label: "Overdue Report",
                                             icon: AlertTriangle,
@@ -467,6 +472,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                             <NavItem
                                 to="/vouchers"
                                 label="Vouchers"
+                                icon={Receipt}
+                            />
+                            <NavItem
+                                to="/payment-vouchers"
+                                label="Payment Vouchers"
                                 icon={Receipt}
                             />
                             <NavItem

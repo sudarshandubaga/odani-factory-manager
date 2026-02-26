@@ -208,6 +208,46 @@ export const PurchaseReport: React.FC = () => {
                         </table>
                     </div>
                 )}
+                {(purchase as any).paymentVouchers &&
+                    (purchase as any).paymentVouchers.length > 0 && (
+                        <div className="mb-8 mt-8">
+                            <h3 className="font-bold text-lg border-b border-gray-300 inline-block mb-2">
+                                Payment History
+                            </h3>
+                            <table className="w-full border-collapse border border-black text-sm">
+                                <thead className="bg-blue-50">
+                                    <tr>
+                                        <th className="border border-black px-2 py-1 text-left">
+                                            Date
+                                        </th>
+                                        <th className="border border-black px-2 py-1 text-left">
+                                            Voucher No
+                                        </th>
+                                        <th className="border border-black px-2 py-1 text-right">
+                                            Amount Paid
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(purchase as any).paymentVouchers.map(
+                                        (v: any) => (
+                                            <tr key={v.id}>
+                                                <td className="border border-black px-2 py-1">
+                                                    {v.date}
+                                                </td>
+                                                <td className="border border-black px-2 py-1">
+                                                    {v.voucher_no}
+                                                </td>
+                                                <td className="border border-black px-2 py-1 text-right font-bold text-blue-700">
+                                                    ₹{v.price}
+                                                </td>
+                                            </tr>
+                                        ),
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
                 <div className="grid grid-cols-2 gap-8 mt-12">
                     <div>

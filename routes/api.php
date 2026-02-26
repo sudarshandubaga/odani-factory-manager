@@ -46,4 +46,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('vouchers/bulk-restore', [VoucherController::class, 'bulkRestore']);
     Route::post('vouchers/bulk-force-delete', [VoucherController::class, 'bulkForceDelete']);
     Route::apiResource('vouchers', VoucherController::class);
+
+    Route::get('payment-vouchers/trash', [\App\Http\Controllers\Api\PaymentVoucherController::class, 'trash']);
+    Route::post('payment-vouchers/{id}/restore', [\App\Http\Controllers\Api\PaymentVoucherController::class, 'restore']);
+    Route::delete('payment-vouchers/{id}/force', [\App\Http\Controllers\Api\PaymentVoucherController::class, 'forceDelete']);
+    Route::post('payment-vouchers/bulk-delete', [\App\Http\Controllers\Api\PaymentVoucherController::class, 'bulkDelete']);
+    Route::post('payment-vouchers/bulk-restore', [\App\Http\Controllers\Api\PaymentVoucherController::class, 'bulkRestore']);
+    Route::post('payment-vouchers/bulk-force-delete', [\App\Http\Controllers\Api\PaymentVoucherController::class, 'bulkForceDelete']);
+    Route::apiResource('payment-vouchers', \App\Http\Controllers\Api\PaymentVoucherController::class);
 });

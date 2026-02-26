@@ -29,4 +29,9 @@ class Purchase extends Model
     {
         return $this->hasMany(Voucher::class, 'khilai_id');
     }
+
+    public function paymentVouchers()
+    {
+        return $this->hasMany(PaymentVoucher::class, 'khilai_id');
+    }
 }

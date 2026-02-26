@@ -223,6 +223,46 @@ export const WorkOrderReport: React.FC = () => {
                             </table>
                         </div>
                     )}
+                    {(order as any).paymentVouchers &&
+                        (order as any).paymentVouchers.length > 0 && (
+                            <div className="mt-6">
+                                <h4 className="font-bold text-xs uppercase tracking-widest mb-2 border-b border-black inline-block">
+                                    Payment History
+                                </h4>
+                                <table className="w-full border-collapse border border-black text-xs">
+                                    <thead className="bg-blue-50">
+                                        <tr>
+                                            <th className="border border-black p-1 text-left">
+                                                Date
+                                            </th>
+                                            <th className="border border-black p-1 text-left">
+                                                Voucher No
+                                            </th>
+                                            <th className="border border-black p-1 text-right">
+                                                Amount Paid
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(order as any).paymentVouchers.map(
+                                            (v: any) => (
+                                                <tr key={v.id}>
+                                                    <td className="border border-black p-1">
+                                                        {v.date}
+                                                    </td>
+                                                    <td className="border border-black p-1">
+                                                        {v.voucher_no}
+                                                    </td>
+                                                    <td className="border border-black p-1 text-right font-bold text-blue-700">
+                                                        ₹{v.price}
+                                                    </td>
+                                                </tr>
+                                            ),
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     {order.notes && (
                         <div className="border border-black p-2 rounded mt-3 text-sm">
                             <span className="font-bold">Completion Notes:</span>{" "}

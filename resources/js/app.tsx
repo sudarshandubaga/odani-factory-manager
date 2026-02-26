@@ -21,6 +21,7 @@ import { OverdueWorkOrdersReport } from "./pages/Reports/OverdueWorkOrdersReport
 import { LedgerReport } from "./pages/Reports/LedgerReport";
 import { ProfilePage } from "./pages/Profile/index";
 import { VoucherList } from "./pages/Vouchers/VoucherList";
+import { PaymentVoucherList } from "./pages/Vouchers/PaymentVoucherList";
 import { ExpiredPage } from "./pages/Error/Expired";
 import { Toaster } from "react-hot-toast";
 
@@ -174,6 +175,14 @@ const AppContent: React.FC = () => {
                     element={
                         <ProtectedRoute>
                             <VoucherList />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/payment-vouchers"
+                    element={
+                        <ProtectedRoute>
+                            <PaymentVoucherList />
                         </ProtectedRoute>
                     }
                 />

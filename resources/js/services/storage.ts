@@ -177,4 +177,44 @@ export const storage = {
     bulkForceDeleteVouchers: async (ids: (string | number)[]) => {
         await api.post("/vouchers/bulk-force-delete", { ids });
     },
+
+    getPaymentVouchers: async () => {
+        const res = await api.get<any[]>("/payment-vouchers");
+        return res.data;
+    },
+    addPaymentVoucher: async (v: FormData) => {
+        const res = await api.post<any>("/payment-vouchers", v);
+        return res.data;
+    },
+    getPaymentVoucher: async (id: string | number) => {
+        const res = await api.get<any>(`/payment-vouchers/${id}`);
+        return res.data;
+    },
+    updatePaymentVoucher: async (id: string | number, v: FormData) => {
+        v.append("_method", "PUT");
+        const res = await api.post<any>(`/payment-vouchers/${id}`, v);
+        return res.data;
+    },
+    deletePaymentVoucher: async (id: string | number) => {
+        await api.delete(`/payment-vouchers/${id}`);
+    },
+    getPaymentVoucherTrash: async () => {
+        const res = await api.get<any[]>("/payment-vouchers/trash");
+        return res.data;
+    },
+    restorePaymentVoucher: async (id: string | number) => {
+        await api.post(`/payment-vouchers/${id}/restore`);
+    },
+    forceDeletePaymentVoucher: async (id: string | number) => {
+        await api.delete(`/payment-vouchers/${id}/force`);
+    },
+    bulkDeletePaymentVouchers: async (ids: (string | number)[]) => {
+        await api.post("/payment-vouchers/bulk-delete", { ids });
+    },
+    bulkRestorePaymentVouchers: async (ids: (string | number)[]) => {
+        await api.post("/payment-vouchers/bulk-restore", { ids });
+    },
+    bulkForceDeletePaymentVouchers: async (ids: (string | number)[]) => {
+        await api.post("/payment-vouchers/bulk-force-delete", { ids });
+    },
 };

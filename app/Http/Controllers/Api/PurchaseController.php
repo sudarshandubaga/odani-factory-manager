@@ -9,7 +9,7 @@ class PurchaseController extends Controller
 {
     public function index(Request $request)
     {
-        return $request->user()->tenant->purchases()->withCount('items')->with(['worker', 'items', 'vouchers'])->latest()->get();
+        return $request->user()->tenant->purchases()->withCount('items')->with(['worker', 'items', 'vouchers', 'paymentVouchers'])->latest()->get();
     }
 
     public function store(Request $request)
@@ -54,12 +54,12 @@ class PurchaseController extends Controller
             ]));
         }
 
-        return $purchase->load('items', 'worker', 'vouchers');
+        return $purchase->load('items', 'worker', 'vouchers', 'paymentVouchers');
     }
 
     public function show(Request $request, string $id)
     {
-        return $request->user()->tenant->purchases()->with('items', 'worker', 'vouchers')->findOrFail($id);
+        return $request->user()->tenant->purchases()->with('items', 'worker', 'vouchers', 'paymentVouchers')->findOrFail($id);
     }
 
     public function update(Request $request, string $id)
@@ -110,12 +110,12 @@ class PurchaseController extends Controller
             }
         }
 
-        return $purchase->load('items', 'worker', 'vouchers');
+        return $purchase->load('items', 'worker', 'vouchers', 'paymentVouchers');
     }
 
     public function trash(Request $request)
     {
-        return $request->user()->tenant->purchases()->onlyTrashed()->withCount('items')->with(['worker', 'items', 'vouchers'])->latest()->get();
+        return $request->user()->tenant->purchases()->onlyTrashed()->withCount('items')->with(['worker', 'items', 'vouchers', 'paymentVouchers'])->latest()->get();
     }
 
     public function restore(Request $request, string $id)
