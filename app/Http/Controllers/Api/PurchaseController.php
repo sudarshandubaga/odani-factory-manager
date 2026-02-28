@@ -85,7 +85,7 @@ class PurchaseController extends Controller
         $totalPieces = 0;
         if (($validated['item_type'] ?? $purchase->item_type) == 'lot') {
             foreach ($validated['items'] as $item) {
-                $totalPieces += $item['pieces_raw'];
+                $totalPieces += $item['pieces_round'];
             }
         } else {
             $totalPieces = $validated['total_pieces'];
