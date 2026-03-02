@@ -295,11 +295,16 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                             | Khilai: {getPurchaseInfo(order.purchase_id)} |
                             Items: {order.items?.length || 0}
                         </div>
-                        <div className="text-xs text-gray-400 mt-1 flex gap-3">
+                        <div className="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-4 gap-y-1">
                             <span>Deadline: {order.deadline}</span>
+                            {order.price_per_pc && (
+                                <span className="text-gray-600 font-black">
+                                    Rate: ₹{order.price_per_pc}
+                                </span>
+                            )}
                             {order.no_of_pieces && (
                                 <span className="text-blue-600 font-bold">
-                                    Pieces: {order.no_of_pieces}
+                                    Total: {order.no_of_pieces} pcs
                                 </span>
                             )}
                             {(() => {
@@ -311,16 +316,26 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                                     ) || 0;
                                 const due =
                                     (order.no_of_pieces || 0) - totalReceived;
+                                const monetaryDue =
+                                    due * (order.price_per_pc || 0);
+
                                 return (
                                     <>
                                         {totalReceived > 0 && (
                                             <span className="text-emerald-600 font-bold">
-                                                Received: {totalReceived} pcs
+                                                Recv: {totalReceived} pcs
                                             </span>
                                         )}
                                         {due > 0 && (
-                                            <span className="text-red-500 font-bold">
+                                            <span className="text-red-500 font-black">
                                                 Due: {due} pcs
+                                                {order.price_per_pc ? (
+                                                    <span className="ml-1 opacity-70">
+                                                        (₹
+                                                        {monetaryDue.toLocaleString()}
+                                                        )
+                                                    </span>
+                                                ) : null}
                                             </span>
                                         )}
                                     </>

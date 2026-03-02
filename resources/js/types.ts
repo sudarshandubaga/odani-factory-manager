@@ -45,6 +45,7 @@ export interface Purchase {
     created_at: number;
     item_type: string;
     total_pieces: number;
+    price_per_pc?: number;
 }
 
 export interface Worker {
@@ -87,6 +88,7 @@ export interface WorkOrder {
     created_at: string;
     childOrders?: WorkOrder[];
     vouchers?: Voucher[];
+    price_per_pc?: number;
 }
 
 export interface Tenant {
@@ -137,4 +139,3 @@ export interface PaymentVoucher {
     description?: string;
     created_at: string;
 }
-

@@ -39,6 +39,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
     const [image, setImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [noOfPieces, setNoOfPieces] = useState<string>("");
+    const [pricePerPc, setPricePerPc] = useState<string>("0");
     const [remarks, setRemarks] = useState<string>("");
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
@@ -79,6 +80,9 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                     setDeadline(order.deadline);
                     setNoOfPieces(
                         order.no_of_pieces ? String(order.no_of_pieces) : "",
+                    );
+                    setPricePerPc(
+                        order.price_per_pc ? String(order.price_per_pc) : "0",
                     );
                     setRemarks(order.remarks || "");
                     if (order.image_url || order.image) {
@@ -178,6 +182,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
         formData.append("worker_id", selWorkerId);
         formData.append("deadline", deadline);
         if (noOfPieces) formData.append("no_of_pieces", noOfPieces);
+        if (pricePerPc) formData.append("price_per_pc", pricePerPc);
         if (remarks) formData.append("remarks", remarks);
         if (image) formData.append("image", image);
 
@@ -366,6 +371,22 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                                 value={noOfPieces}
                                 onChange={(e) => setNoOfPieces(e.target.value)}
                                 placeholder="Enter number of pieces..."
+                            />
+                        </div>
+
+                        {/* 5b. Price per Pc */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider text-brand-700">
+                                5b. Rate (₹ per Pc)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="block w-full border-brand-200 rounded-lg shadow-sm border p-3 focus:ring-brand-500 focus:border-brand-500 font-bold text-brand-700"
+                                value={pricePerPc}
+                                onChange={(e) => setPricePerPc(e.target.value)}
+                                placeholder="0.00"
                             />
                         </div>
 

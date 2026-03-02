@@ -22,6 +22,7 @@ class WorkOrder extends Model
         'notes',
         'no_of_pieces',
         'remarks',
+        'price_per_pc',
     ];
 
     protected $appends = ['image_url'];

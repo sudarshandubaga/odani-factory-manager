@@ -216,7 +216,7 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
             )}
 
             <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 min-h-[500px] relative">
-                <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_150px] bg-gray-50/50 border-b border-gray-200">
+                <div className="grid grid-cols-[40px_1.2fr_1fr_1fr_1.5fr_1fr_1fr_1fr_1fr_1.2fr_150px] bg-gray-50/50 border-b border-gray-200">
                     <div className="px-4 py-3 flex items-center">
                         <button
                             onClick={toggleSelectAll}
@@ -242,6 +242,9 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                     <div className="px-6 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider">
                         Worker
                     </div>
+                    <div className="px-6 py-3 text-left text-xs font-black text-gray-600 uppercase tracking-wider">
+                        Rate
+                    </div>
                     <div className="px-6 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider">
                         Total Pcs
                     </div>
@@ -250,6 +253,9 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                     </div>
                     <div className="px-6 py-3 text-left text-xs font-black text-red-600 uppercase tracking-wider">
                         Due
+                    </div>
+                    <div className="px-6 py-3 text-left text-xs font-black text-blue-600 uppercase tracking-wider">
+                        Due (₹)
                     </div>
                     <div className="px-6 py-3 text-right text-xs font-black text-gray-400 uppercase tracking-wider">
                         Actions
@@ -270,7 +276,7 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                             return (
                                 <div
                                     key={p.id}
-                                    className={`grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_150px] border-b border-gray-100 items-center hover:bg-gray-50 transition-colors ${isSelected ? "bg-brand-50/30" : ""}`}
+                                    className={`grid grid-cols-[40px_1.2fr_1fr_1fr_1.5fr_1fr_1fr_1fr_1fr_1.2fr_150px] border-b border-gray-100 items-center hover:bg-gray-50 transition-colors ${isSelected ? "bg-brand-50/30" : ""}`}
                                 >
                                     <div className="px-4 py-4 flex items-center">
                                         <button
@@ -298,6 +304,11 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                     <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
                                         {p.worker?.name || "Unknown"}
                                     </div>
+                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                                        {p.price_per_pc
+                                            ? `₹${p.price_per_pc}`
+                                            : "—"}
+                                    </div>
                                     <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold">
                                         {p.total_pieces}
                                     </div>
@@ -306,6 +317,12 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                     </div>
                                     <div className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-black">
                                         {due}
+                                    </div>
+                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-black">
+                                        ₹
+                                        {(
+                                            due * (p.price_per_pc || 0)
+                                        ).toLocaleString()}
                                     </div>
                                     <div className="px-6 py-4 whitespace-nowrap flex justify-end gap-3 text-end text-sm font-medium">
                                         {isTrashView ? (
@@ -470,27 +487,59 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                         </span>
                                     </div>
                                 </div>
-                                <div className="bg-brand-50 p-4 rounded-lg border border-brand-100">
-                                    <p className="text-xs text-brand-600 font-bold uppercase tracking-wider mb-2">
-                                        Summary
+                                <div className="bg-brand-50 p-4 rounded-lg border-2 border-brand-200 shadow-sm">
+                                    <p className="text-xs text-brand-700 font-black uppercase tracking-widest mb-3">
+                                        Pricing Summary
                                     </p>
-                                    <div className="space-y-1">
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-600 uppercase text-[10px] font-bold">
+                                                Rate:
+                                            </span>
+                                            <span className="font-black text-brand-700">
+                                                ₹
+                                                {selectedPurchaseDetails.price_per_pc ||
+                                                    0}
+                                            </span>
+                                        </div>
                                         {selectedPurchaseDetails.item_type ===
                                             "lot" && (
-                                            <div className="flex justify-between text-sm">
-                                                <span>Total Items:</span>
+                                            <div className="flex justify-between text-sm border-t border-brand-100 pt-1">
+                                                <span className="text-gray-600 uppercase text-[10px] font-bold">
+                                                    Total Items:
+                                                </span>
                                                 <span className="font-bold">
                                                     {selectedPurchaseDetails
                                                         .items?.length || 0}
                                                 </span>
                                             </div>
                                         )}
-                                        <div className="flex justify-between text-sm">
-                                            <span>Total Pieces:</span>
+                                        <div className="flex justify-between text-sm border-t border-brand-100 pt-1">
+                                            <span className="text-gray-600 uppercase text-[10px] font-bold">
+                                                Total Pieces:
+                                            </span>
                                             <span className="font-bold">
                                                 {
                                                     selectedPurchaseDetails.total_pieces
                                                 }
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between text-sm border-t-2 border-brand-200 pt-2 mt-2">
+                                            <span className="text-brand-800 uppercase text-[10px] font-black">
+                                                Total Amount:
+                                            </span>
+                                            <span className="font-black text-brand-900 text-lg">
+                                                ₹
+                                                {(
+                                                    Number(
+                                                        selectedPurchaseDetails.total_pieces ||
+                                                            0,
+                                                    ) *
+                                                    Number(
+                                                        selectedPurchaseDetails.price_per_pc ||
+                                                            0,
+                                                    )
+                                                ).toLocaleString()}
                                             </span>
                                         </div>
                                     </div>

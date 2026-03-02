@@ -26,6 +26,7 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
     const [patSize, setPatSize] = useState<number>(2.5);
     const [itemType, setItemType] = useState<"lot" | "pieces">("lot");
     const [totalPieces, setTotalPieces] = useState<number>(0);
+    const [pricePerPc, setPricePerPc] = useState<number>(0);
     const [isEditing, setIsEditing] = useState(false);
     const [items, setItems] = useState<PurchaseItem[]>([
         {
@@ -54,6 +55,7 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                 setPatSize(Number(purchase.pat_size));
                 setItemType(purchase.item_type as "lot" | "pieces");
                 setTotalPieces(Number(purchase.total_pieces));
+                setPricePerPc(Number(purchase.price_per_pc || 0));
 
                 if (purchase.item_type === "lot" && purchase.items) {
                     setItems(
@@ -180,6 +182,7 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
             pat_size: patSize,
             item_type: itemType,
             total_pieces: itemType === "pieces" ? totalPieces : null,
+            price_per_pc: pricePerPc,
             items: validItems.map((i) => ({
                 s_no: i.sNo,
                 size_meters: i.sizeMeters,
@@ -346,6 +349,23 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                             />
                         </div>
                     )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Price per Pc (₹)
+                        </label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={pricePerPc || ""}
+                            onChange={(e) =>
+                                setPricePerPc(parseFloat(e.target.value) || 0)
+                            }
+                            placeholder="0.00"
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm border p-2 font-bold text-brand-700"
+                        />
+                    </div>
                 </div>
 
                 {itemType === "lot" ? (

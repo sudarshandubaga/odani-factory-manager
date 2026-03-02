@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { storage } from "../../services/storage";
 import { COMPANY_NAME } from "../../constants";
 import { Purchase, WorkOrder, Worker } from "../../types";
-import { Printer } from "lucide-react";
+import { Printer, ChevronDown, ChevronRight, User } from "lucide-react";
 
 export const LedgerReport: React.FC = () => {
     const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -13,6 +13,9 @@ export const LedgerReport: React.FC = () => {
     const [toDate, setToDate] = useState("");
     const [selectedWorkerId, setSelectedWorkerId] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
+    const [expandedWorkers, setExpandedWorkers] = useState<Set<string>>(
+        new Set(),
+    );
 
     useEffect(() => {
         const fetchData = async () => {
@@ -65,6 +68,7 @@ export const LedgerReport: React.FC = () => {
         allActivities.push({
             date: orderDate,
             id: orderId,
+            workerId: order.worker_id,
             displayId:
                 "total_pieces" in order
                     ? (order as any).invoice_no
@@ -75,6 +79,7 @@ export const LedgerReport: React.FC = () => {
             details,
             assigned: Number(totalPieces),
             received: 0,
+            rate: Number(order.price_per_pc || 0),
             sortPriority: 1, // Assignment first on same day
             orderId: orderId,
             deadline: (order as any).deadline || "—",
@@ -85,6 +90,7 @@ export const LedgerReport: React.FC = () => {
             allActivities.push({
                 date: v.date,
                 id: v.id,
+                workerId: order.worker_id,
                 displayId: v.voucher_no,
                 type: "Voucher",
                 source: sourceName,
@@ -92,7 +98,30 @@ export const LedgerReport: React.FC = () => {
                 details: `Voucher ${v.voucher_no} (${details})`,
                 assigned: 0,
                 received: Number(v.total_received),
+                rate: Number(order.price_per_pc || 0),
                 sortPriority: 2,
+                orderId: orderId,
+                deadline: "—",
+            });
+        });
+
+        // Payment Voucher Entries
+        const pVouchers = (order as any).payment_vouchers || [];
+        pVouchers.forEach((pv: any) => {
+            allActivities.push({
+                date: pv.date,
+                id: pv.id,
+                workerId: order.worker_id,
+                displayId: pv.voucher_no,
+                type: "Payment",
+                source: sourceName,
+                workerName,
+                details: `Payment Voucher ${pv.voucher_no} - ₹${pv.price} (${details})`,
+                assigned: 0,
+                received: 0,
+                amount: Number(pv.price),
+                rate: 0,
+                sortPriority: 3,
                 orderId: orderId,
                 deadline: "—",
             });
@@ -105,29 +134,58 @@ export const LedgerReport: React.FC = () => {
         return a.sortPriority - b.sortPriority;
     });
 
-    // 3. Calculate running stats
-    const jobReceivedMap: Record<string, number> = {};
-    const jobAssignedMap: Record<string, number> = {};
-    let runningBalance = 0;
+    // 3. Calculate per-worker running stats
+    const workerRunningStats: Record<
+        string,
+        {
+            balance: number;
+            monetaryBalance: number;
+            earned: number;
+            paid: number;
+            assigned: Record<string, number>;
+            received: Record<string, number>;
+        }
+    > = {};
 
     const processedLedger = allActivities.map((activity) => {
-        const oId = activity.orderId;
+        const wId = String(activity.workerId);
+        const oId = String(activity.orderId);
 
-        // Update job-specific stats
-        jobAssignedMap[oId] = (jobAssignedMap[oId] || 0) + activity.assigned;
-        jobReceivedMap[oId] = (jobReceivedMap[oId] || 0) + activity.received;
+        if (!workerRunningStats[wId]) {
+            workerRunningStats[wId] = {
+                balance: 0,
+                monetaryBalance: 0,
+                earned: 0,
+                paid: 0,
+                assigned: {},
+                received: {},
+            };
+        }
 
-        const jobTotalAssigned = jobAssignedMap[oId];
-        const jobTotalReceived = jobReceivedMap[oId];
+        const stats = workerRunningStats[wId];
+        stats.assigned[oId] = (stats.assigned[oId] || 0) + activity.assigned;
+        stats.received[oId] = (stats.received[oId] || 0) + activity.received;
 
-        // Update account-wide balance (Received - Assigned)
-        runningBalance = runningBalance + activity.received - activity.assigned;
+        // Piece balance: received - assigned
+        stats.balance = stats.balance + activity.received - activity.assigned;
+
+        // Monetary: Earned (from pieces received) - Paid (from payment vouchers)
+        const earnedFromThis = activity.received * (activity.rate || 0);
+        const paidInThis =
+            activity.type === "Payment" ? activity.amount || 0 : 0;
+
+        stats.earned += earnedFromThis;
+        stats.paid += paidInThis;
+        stats.monetaryBalance = stats.earned - stats.paid;
 
         return {
             ...activity,
-            completed: jobTotalReceived,
-            due: Math.max(0, jobTotalAssigned - jobTotalReceived),
-            balance: runningBalance,
+            completed: stats.received[oId],
+            due: Math.max(0, stats.assigned[oId] - stats.received[oId]),
+            balance: stats.balance,
+            monetaryBalance: stats.monetaryBalance,
+            earnedFromThis,
+            paidInThis,
         };
     });
 
@@ -146,10 +204,38 @@ export const LedgerReport: React.FC = () => {
 
     const totalAssigned = displayedLedger.reduce((s, a) => s + a.assigned, 0);
     const totalReceived = displayedLedger.reduce((s, a) => s + a.received, 0);
-    const netBalance =
-        displayedLedger.length > 0
-            ? displayedLedger[displayedLedger.length - 1].balance
-            : 0;
+    const totalPaid = displayedLedger
+        .filter((a) => a.type === "Payment")
+        .reduce((s, a) => s + (a.amount || 0), 0);
+    const totalEarned = displayedLedger.reduce(
+        (s, a) => s + (a.earnedFromThis || 0),
+        0,
+    );
+    const totalMonetaryDue = Object.values(workerRunningStats).reduce(
+        (s, st) => s + st.monetaryBalance,
+        0,
+    );
+
+    // Grouping by Worker
+    const groupedLedger: Record<string, any[]> = {};
+    displayedLedger.forEach((row) => {
+        const wId = String(row.workerId);
+        if (!groupedLedger[wId]) groupedLedger[wId] = [];
+        groupedLedger[wId].push(row);
+    });
+
+    const toggleWorker = (id: string | number) => {
+        const sid = String(id);
+        const next = new Set(expandedWorkers);
+        if (next.has(sid)) next.delete(sid);
+        else next.add(sid);
+        setExpandedWorkers(next);
+    };
+
+    const netBalance = Object.values(workerRunningStats).reduce(
+        (sum, s) => sum + s.balance,
+        0,
+    );
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
@@ -249,39 +335,65 @@ export const LedgerReport: React.FC = () => {
                 </div>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-4 gap-4 mb-8 text-center text-sm">
-                    <div className="border-2 border-black p-3 rounded">
-                        <div className="text-xs uppercase font-bold text-gray-500 mb-1">
-                            Total Entries
+                <div className="grid grid-cols-7 gap-2 mb-8 text-center text-[10px] md:text-sm">
+                    <div className="border border-black p-2 rounded">
+                        <div className="text-[9px] uppercase font-bold text-gray-500 mb-1">
+                            Entries
                         </div>
-                        <div className="text-2xl font-black">
+                        <div className="text-sm md:text-xl font-black">
                             {displayedLedger.length}
                         </div>
                     </div>
-                    <div className="border-2 border-black p-3 rounded">
-                        <div className="text-xs uppercase font-bold text-gray-500 mb-1">
-                            Total Assigned
+                    <div className="border border-black p-2 rounded">
+                        <div className="text-[9px] uppercase font-bold text-gray-500 mb-1">
+                            Assigned
                         </div>
-                        <div className="text-2xl font-black">
+                        <div className="text-sm md:text-xl font-black">
                             {totalAssigned}
                         </div>
                     </div>
-                    <div className="border-2 border-green-700 bg-green-50 p-3 rounded">
-                        <div className="text-xs uppercase font-bold text-green-700 mb-1">
-                            Total Received
+                    <div className="border border-green-700 bg-green-50 p-2 rounded">
+                        <div className="text-[9px] uppercase font-bold text-green-700 mb-1">
+                            Received
                         </div>
-                        <div className="text-2xl font-black text-green-800">
+                        <div className="text-sm md:text-xl font-black text-green-800">
                             {totalReceived}
                         </div>
                     </div>
-                    <div className="border-2 border-red-600 bg-red-50 p-3 rounded">
-                        <div className="text-xs uppercase font-bold text-red-600 mb-1">
-                            Net Balance (Pcs)
+                    <div className="border border-amber-700 bg-amber-50 p-2 rounded">
+                        <div className="text-[9px] uppercase font-bold text-amber-700 mb-1">
+                            Earned (₹)
+                        </div>
+                        <div className="text-sm md:text-xl font-black text-amber-800">
+                            ₹{totalEarned.toLocaleString()}
+                        </div>
+                    </div>
+                    <div className="border border-purple-700 bg-purple-50 p-2 rounded">
+                        <div className="text-[9px] uppercase font-bold text-purple-700 mb-1">
+                            Paid (₹)
+                        </div>
+                        <div className="text-sm md:text-xl font-black text-purple-800">
+                            ₹{totalPaid.toLocaleString()}
+                        </div>
+                    </div>
+                    <div className="border border-red-600 bg-red-50 p-2 rounded">
+                        <div className="text-[9px] uppercase font-bold text-red-600 mb-1">
+                            Bal (Pcs)
                         </div>
                         <div
-                            className={`text-2xl font-black ${netBalance < 0 ? "text-red-700" : netBalance > 0 ? "text-green-700" : "text-gray-900"}`}
+                            className={`text-sm md:text-xl font-black ${netBalance < 0 ? "text-red-700" : netBalance > 0 ? "text-green-700" : "text-gray-900"}`}
                         >
                             {netBalance}
+                        </div>
+                    </div>
+                    <div className="border border-blue-600 bg-blue-50 p-2 rounded shadow-sm">
+                        <div className="text-[9px] uppercase font-bold text-blue-600 mb-1">
+                            Net Due (₹)
+                        </div>
+                        <div
+                            className={`text-sm md:text-xl font-black ${totalMonetaryDue > 0 ? "text-blue-700" : "text-gray-900"}`}
+                        >
+                            ₹{totalMonetaryDue.toLocaleString()}
                         </div>
                     </div>
                 </div>
@@ -302,11 +414,14 @@ export const LedgerReport: React.FC = () => {
                             <th className="border border-black px-2 py-2 text-left text-[10px] uppercase font-black">
                                 Details
                             </th>
-                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-20">
+                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-14">
+                                Rate
+                            </th>
+                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-24">
                                 Assigned
                             </th>
-                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-20">
-                                Received
+                            <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-28">
+                                Recv/Paid
                             </th>
                             <th className="border border-black px-2 py-2 text-center text-[10px] uppercase font-black w-20">
                                 Completed
@@ -317,64 +432,210 @@ export const LedgerReport: React.FC = () => {
                             <th className="border border-black px-2 py-2 text-right text-[10px] uppercase font-black bg-gray-50 w-24">
                                 Balance
                             </th>
+                            <th className="border border-black px-2 py-2 text-right text-[10px] uppercase font-black bg-blue-50/50 w-24">
+                                Net Due (₹)
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        {displayedLedger.map((row, idx) => (
-                            <tr
-                                key={`${row.type}-${row.id}-${idx}`}
-                                className={`hover:bg-gray-50 transition-colors ${row.type === "Assignment" ? "bg-gray-50/50" : ""}`}
-                            >
-                                <td className="border border-black px-2 py-1.5 font-mono">
-                                    {row.displayId}
-                                </td>
-                                <td className="border border-black px-2 py-1.5 font-medium">
-                                    {row.date}
-                                </td>
-                                <td className="border border-black px-2 py-1.5">
-                                    <div className="flex flex-col gap-0.5">
-                                        <span
-                                            className={`text-[8px] font-black uppercase px-1 py-0 rounded w-fit ${row.type === "Assignment" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}
+                        {Object.entries(groupedLedger).map(
+                            ([workerId, activities]) => {
+                                const isExpanded =
+                                    expandedWorkers.has(workerId);
+                                const workerName = activities[0].workerName;
+                                const wAssigned = activities.reduce(
+                                    (s, a) => s + a.assigned,
+                                    0,
+                                );
+                                const wReceived = activities.reduce(
+                                    (s, a) => s + a.received,
+                                    0,
+                                );
+                                const wPaid = activities
+                                    .filter((a) => a.type === "Payment")
+                                    .reduce((s, a) => s + (a.amount || 0), 0);
+                                const wEarned = activities.reduce(
+                                    (s, a) => s + (a.earnedFromThis || 0),
+                                    0,
+                                );
+                                const lastActivity =
+                                    activities.length > 0
+                                        ? activities[activities.length - 1]
+                                        : { balance: 0, monetaryBalance: 0 };
+                                const wBalance = lastActivity.balance;
+                                const wNetDue = lastActivity.monetaryBalance;
+
+                                return (
+                                    <React.Fragment key={workerId}>
+                                        {/* Worker Summary Row */}
+                                        <tr
+                                            onClick={() =>
+                                                toggleWorker(workerId)
+                                            }
+                                            className="bg-gray-100/80 cursor-pointer hover:bg-gray-200 transition-colors border-y border-black"
                                         >
-                                            {row.type}
-                                        </span>
-                                        <span className="font-bold leading-tight">
-                                            {row.workerName}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="border border-black px-2 py-1.5 text-gray-600">
-                                    {row.details}
-                                </td>
-                                <td className="border border-black px-2 py-1.5 text-center font-bold">
-                                    {row.assigned > 0 ? row.assigned : "—"}
-                                </td>
-                                <td className="border border-black px-2 py-1.5 text-center font-bold">
-                                    {row.received > 0 ? (
-                                        <span className="text-emerald-600">
-                                            +{row.received}
-                                        </span>
-                                    ) : (
-                                        "—"
-                                    )}
-                                </td>
-                                <td className="border border-black px-2 py-1.5 text-center text-brand-600 font-black">
-                                    {row.completed}
-                                </td>
-                                <td className="border border-black px-2 py-1.5 text-center text-red-600 font-black">
-                                    {row.due}
-                                </td>
-                                <td
-                                    className={`border border-black px-2 py-1.5 text-right font-black bg-gray-50/50 ${row.balance < 0 ? "text-red-700" : row.balance > 0 ? "text-emerald-700" : "text-gray-900"}`}
-                                >
-                                    {row.balance}
-                                </td>
-                            </tr>
-                        ))}
+                                            <td
+                                                colSpan={4}
+                                                className="px-4 py-3 border-x border-black/10"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    {isExpanded ? (
+                                                        <ChevronDown className="w-4 h-4 text-brand-600" />
+                                                    ) : (
+                                                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center">
+                                                            <User className="w-4 h-4 text-brand-600" />
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-black text-xs uppercase tracking-wider">
+                                                                {workerName}
+                                                            </span>
+                                                            <p className="text-[9px] text-gray-500 font-bold">
+                                                                {
+                                                                    activities.length
+                                                                }{" "}
+                                                                Transactions
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            {/* Summary Row Monetary Stats */}
+                                            <td className="px-2 py-3 text-center border-x border-black/10 bg-amber-50/20">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[8px] text-gray-400 uppercase font-black">
+                                                        Earned
+                                                    </span>
+                                                    <span className="font-black text-amber-900">
+                                                        ₹
+                                                        {wEarned.toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-2 py-3 text-center font-black text-gray-900 border-x border-black/10">
+                                                {wAssigned > 0
+                                                    ? `${wAssigned} pcs`
+                                                    : "—"}
+                                            </td>
+                                            <td className="px-2 py-3 text-center font-black text-emerald-800 border-x border-black/10 bg-emerald-50/30">
+                                                <div className="flex flex-col gap-0.5">
+                                                    {wReceived > 0 && (
+                                                        <span className="text-emerald-700">
+                                                            +{wReceived} pcs
+                                                        </span>
+                                                    )}
+                                                    {wPaid > 0 && (
+                                                        <span className="text-purple-700">
+                                                            ₹{wPaid} Paid
+                                                        </span>
+                                                    )}
+                                                    {wReceived === 0 &&
+                                                        wPaid === 0 &&
+                                                        "—"}
+                                                </div>
+                                            </td>
+                                            <td className="px-2 py-3 text-center border-x border-black/10 text-gray-400">
+                                                {wReceived}
+                                            </td>
+                                            <td className="px-2 py-3 text-center border-x border-black/10 text-red-600 font-bold">
+                                                {Math.max(
+                                                    0,
+                                                    wAssigned - wReceived,
+                                                )}
+                                            </td>
+                                            <td
+                                                className={`px-2 py-3 text-right font-black border-x border-black/10 bg-gray-50/50 ${wBalance < 0 ? "text-red-700" : wBalance > 0 ? "text-emerald-700" : "text-gray-900"}`}
+                                            >
+                                                {wBalance} pcs
+                                            </td>
+                                            <td className="px-2 py-3 text-right font-black border-x border-black/10 bg-blue-50/50 text-blue-800">
+                                                ₹{wNetDue.toLocaleString()}
+                                            </td>
+                                        </tr>
+
+                                        {/* Individual Transaction Rows (Visible when expanded) */}
+                                        {isExpanded &&
+                                            activities.map((row, idx) => (
+                                                <tr
+                                                    key={`${row.type}-${row.id}-${idx}`}
+                                                    className={`hover:bg-gray-50 transition-colors animate-in slide-in-from-top-1 duration-200 ${row.type === "Assignment" ? "bg-gray-50/50" : row.type === "Payment" ? "bg-purple-50/10" : "bg-white"}`}
+                                                >
+                                                    <td className="border border-black/10 px-2 py-1.5 font-mono text-gray-400">
+                                                        {row.displayId}
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5 font-medium">
+                                                        {row.date}
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5">
+                                                        <span
+                                                            className={`text-[8px] font-black uppercase px-1 py-0 rounded w-fit ${
+                                                                row.type ===
+                                                                "Assignment"
+                                                                    ? "bg-blue-100 text-blue-700"
+                                                                    : row.type ===
+                                                                        "Payment"
+                                                                      ? "bg-purple-100 text-purple-700"
+                                                                      : "bg-emerald-100 text-emerald-700"
+                                                            }`}
+                                                        >
+                                                            {row.type}
+                                                        </span>
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5 text-gray-600 italic">
+                                                        {row.details}
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5 text-center text-gray-400 font-bold">
+                                                        {row.rate
+                                                            ? `₹${row.rate}`
+                                                            : "—"}
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5 text-center font-bold">
+                                                        {row.assigned > 0
+                                                            ? `${row.assigned} pcs`
+                                                            : "—"}
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5 text-center font-bold">
+                                                        {row.received > 0 ? (
+                                                            <span className="text-emerald-600">
+                                                                +{row.received}{" "}
+                                                                pcs
+                                                            </span>
+                                                        ) : row.type ===
+                                                          "Payment" ? (
+                                                            <span className="text-purple-700 font-black">
+                                                                ₹{row.amount}
+                                                            </span>
+                                                        ) : (
+                                                            "—"
+                                                        )}
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5 text-center text-gray-400">
+                                                        {row.completed}
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5 text-center text-red-600 font-bold">
+                                                        {row.due}
+                                                    </td>
+                                                    <td
+                                                        className={`border border-black/10 px-2 py-1.5 text-right font-bold bg-gray-50/30 ${row.balance < 0 ? "text-red-700" : row.balance > 0 ? "text-emerald-700" : "text-gray-900"}`}
+                                                    >
+                                                        {row.balance} pcs
+                                                    </td>
+                                                    <td className="border border-black/10 px-2 py-1.5 text-right font-black bg-blue-50/20 text-blue-900">
+                                                        ₹
+                                                        {row.monetaryBalance.toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                    </React.Fragment>
+                                );
+                            },
+                        )}
                         {displayedLedger.length === 0 && (
                             <tr>
                                 <td
-                                    colSpan={9}
+                                    colSpan={11}
                                     className="border border-black px-2 py-8 text-center text-gray-400 italic"
                                 >
                                     No ledger entries found for the selected
