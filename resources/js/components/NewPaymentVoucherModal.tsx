@@ -37,11 +37,13 @@ export const NewPaymentVoucherModal: React.FC<NewPaymentVoucherModalProps> = ({
     useEffect(() => {
         if (initialData) {
             setTotalDue(initialData.totalDue);
-            setPrice(initialData.price || 0);
+            // For new vouchers, auto-fill amount with the total due
+            setPrice(initialData.price ?? initialData.totalDue ?? 0);
             setDate(initialData.date || new Date().toISOString().split("T")[0]);
             setDescription(initialData.description || "");
         } else {
             setPrice(0);
+            setTotalDue(0);
         }
     }, [initialData, isOpen]);
 

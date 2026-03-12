@@ -27,6 +27,7 @@ class WorkOrderController extends Controller
             'deadline' => 'required|date',
             'image' => 'nullable',
             'no_of_pieces' => 'nullable|integer',
+            'price_per_pc' => 'nullable|numeric|min:0',
             'remarks' => 'nullable|string',
         ]);
 
@@ -71,6 +72,7 @@ class WorkOrderController extends Controller
             'image' => $imagePath,
             'status' => 'active',
             'no_of_pieces' => $validated['no_of_pieces'] ?? null,
+            'price_per_pc' => $validated['price_per_pc'] ?? null,
             'remarks' => $validated['remarks'] ?? null,
         ]);
 
@@ -103,6 +105,7 @@ class WorkOrderController extends Controller
             'deadline' => 'nullable|date',
             'image' => 'nullable',
             'no_of_pieces' => 'nullable|integer',
+            'price_per_pc' => 'nullable|numeric|min:0',
             'remarks' => 'nullable|string',
             'status' => 'nullable|in:active,completed',
             'received_pcs' => 'nullable|integer',
@@ -119,7 +122,7 @@ class WorkOrderController extends Controller
         }
 
         $updateData = [];
-        $fields = ['work_type_id', 'purchase_id', 'parent_order_id', 'worker_id', 'deadline', 'no_of_pieces', 'remarks', 'status', 'received_pcs', 'notes'];
+        $fields = ['work_type_id', 'purchase_id', 'parent_order_id', 'worker_id', 'deadline', 'no_of_pieces', 'price_per_pc', 'remarks', 'status', 'received_pcs', 'notes'];
         foreach ($fields as $field) {
             if ($request->has($field)) {
                 $updateData[$field] = $validated[$field];

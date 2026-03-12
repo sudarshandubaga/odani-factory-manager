@@ -14,8 +14,6 @@ import {
 } from "lucide-react";
 import { NewVoucherModal } from "../../components/NewVoucherModal";
 import { NewPaymentVoucherModal } from "../../components/NewPaymentVoucherModal";
-import { List, RowComponentProps } from "react-window";
-
 import { toast } from "react-hot-toast";
 
 interface WorkOrderListProps {
@@ -30,9 +28,9 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
     workTypeId,
 }) => {
     const [orders, setOrders] = useState<WorkOrder[]>([]);
-    const [filter, setFilter] = useState<
-        "pending" | "completed" | "overdue" | "all"
-    >("all");
+    const [filter, setFilter] = useState<"pending" | "completed" | "paid">(
+        "pending",
+    );
     const [workers, setWorkers] = useState<Worker[]>([]);
     const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
     const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -164,7 +162,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
     // Reset status filter when work type changes
     useEffect(() => {
-        setFilter("all");
+        setFilter("pending");
     }, [workTypeId]);
 
     // Resolve all type IDs that belong to the selected root work type (root + its children)
@@ -187,19 +185,42 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
         ? orders.filter((o) => typeFilterIds.has(String(o.work_type_id)))
         : orders;
 
-    const filteredOrders = typeFilteredOrders.filter((order) => {
+    const getOrderStats = (order: WorkOrder) => {
         const totalReceived =
             order.vouchers?.reduce(
                 (sum, v) => sum + Number(v.total_received),
                 0,
             ) || 0;
-        const isCompleted =
-            order.no_of_pieces && totalReceived >= order.no_of_pieces;
+        const isCompleted = !!(
+            order.no_of_pieces && totalReceived >= order.no_of_pieces
+        );
+        // Total value of the entire job (assigned pieces × rate)
+        const totalJobValue =
+            (order.no_of_pieces || 0) * (order.price_per_pc || 0);
+        const earned = totalReceived * (order.price_per_pc || 0);
+        const totalPaid = ((order as any).payment_vouchers || []).reduce(
+            (sum: number, pv: any) => sum + Number(pv.price || 0),
+            0,
+        );
+        // Monetary due = total job value minus what's already been paid
+        const monetaryDue = Math.max(0, totalJobValue - totalPaid);
+        const isPaid = totalJobValue > 0 && totalPaid >= totalJobValue;
+        return {
+            totalReceived,
+            isCompleted,
+            earned,
+            totalPaid,
+            totalJobValue,
+            monetaryDue,
+            isPaid,
+        };
+    };
 
-        if (filter === "all") return true;
+    const filteredOrders = typeFilteredOrders.filter((order) => {
+        const { isCompleted, isPaid } = getOrderStats(order);
         if (filter === "pending") return !isCompleted;
-        if (filter === "completed") return isCompleted;
-        if (filter === "overdue") return !isCompleted && order.deadline < today;
+        if (filter === "completed") return isCompleted && !isPaid;
+        if (filter === "paid") return isPaid;
         return true;
     });
 
@@ -214,255 +235,6 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
     const getPurchaseInfo = (id: any) => {
         const p = purchases.find((x) => x.id == id);
         return p ? `Inv #${p.invoice_no}` : "Unknown";
-    };
-
-    const Row = ({ index, style, ...props }: RowComponentProps) => {
-        const order = filteredOrders[index];
-        if (!order) return null;
-        const isSelected = selectedIds.includes(String(order.id));
-
-        return (
-            <div
-                style={style}
-                {...props}
-                className={`p-4 border-b border-gray-100 hover:bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white transition-colors ${isSelected ? "bg-brand-50/30" : ""}`}
-            >
-                <div className="flex items-start gap-4 flex-1">
-                    <div className="flex items-center mt-6">
-                        <button
-                            onClick={() => toggleSelect(String(order.id))}
-                            className="text-gray-400 hover:text-brand-600 transition-colors"
-                        >
-                            {isSelected ? (
-                                <CheckSquare className="w-5 h-5 text-brand-600" />
-                            ) : (
-                                <Square className="w-5 h-5" />
-                            )}
-                        </button>
-                    </div>
-                    <div className="flex-shrink-0">
-                        {order.image_url || order.image ? (
-                            <img
-                                src={order.image_url || order.image || ""}
-                                alt="Job"
-                                className="w-16 h-16 object-cover rounded-md border border-gray-200"
-                            />
-                        ) : (
-                            <div className="w-16 h-16 bg-gray-50 border border-dashed border-gray-200 rounded-md flex items-center justify-center text-gray-300">
-                                <Plus className="w-6 h-6" />
-                            </div>
-                        )}
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-lg text-gray-900">
-                                {getWorkName(order.work_type_id)}
-                            </span>
-                            {(() => {
-                                const totalReceived =
-                                    order.vouchers?.reduce(
-                                        (sum, v) =>
-                                            sum + Number(v.total_received),
-                                        0,
-                                    ) || 0;
-                                const isCompleted =
-                                    order.no_of_pieces &&
-                                    totalReceived >= order.no_of_pieces;
-                                return (
-                                    <>
-                                        <span
-                                            className={`px-2 inline-flex text-[10px] uppercase font-black tracking-widest leading-5 rounded-full ${!isCompleted ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}
-                                        >
-                                            {isCompleted
-                                                ? "COMPLETED"
-                                                : "ACTIVE"}
-                                        </span>
-                                        {!isCompleted &&
-                                            order.deadline < today && (
-                                                <span className="px-2 inline-flex text-[10px] uppercase font-black tracking-widest leading-5 rounded-full bg-red-100 text-red-700">
-                                                    OVERDUE
-                                                </span>
-                                            )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">
-                            Worker:{" "}
-                            <span className="font-medium text-gray-700">
-                                {getWorkerName(order.worker_id)}
-                            </span>{" "}
-                            | Khilai: {getPurchaseInfo(order.purchase_id)} |
-                            Items: {order.items?.length || 0}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                            <span>Deadline: {order.deadline}</span>
-                            {order.price_per_pc && (
-                                <span className="text-gray-600 font-black">
-                                    Rate: ₹{order.price_per_pc}
-                                </span>
-                            )}
-                            {order.no_of_pieces && (
-                                <span className="text-blue-600 font-bold">
-                                    Total: {order.no_of_pieces} pcs
-                                </span>
-                            )}
-                            {(() => {
-                                const totalReceived =
-                                    order.vouchers?.reduce(
-                                        (sum, v) =>
-                                            sum + Number(v.total_received),
-                                        0,
-                                    ) || 0;
-                                const due =
-                                    (order.no_of_pieces || 0) - totalReceived;
-                                const monetaryDue =
-                                    due * (order.price_per_pc || 0);
-
-                                return (
-                                    <>
-                                        {totalReceived > 0 && (
-                                            <span className="text-emerald-600 font-bold">
-                                                Recv: {totalReceived} pcs
-                                            </span>
-                                        )}
-                                        {due > 0 && (
-                                            <span className="text-red-500 font-black">
-                                                Due: {due} pcs
-                                                {order.price_per_pc ? (
-                                                    <span className="ml-1 opacity-70">
-                                                        (₹
-                                                        {monetaryDue.toLocaleString()}
-                                                        )
-                                                    </span>
-                                                ) : null}
-                                            </span>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isTrashView ? (
-                        <>
-                            <button
-                                onClick={() => handleRestore(order.id)}
-                                className="p-2 text-emerald-600 hover:text-emerald-800"
-                                title="Restore"
-                            >
-                                <RotateCcw className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => handleForceDelete(order.id)}
-                                className="p-2 text-red-600 hover:text-red-800"
-                                title="Delete Permanently"
-                            >
-                                <Trash className="w-5 h-5" />
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <div className="flex -space-x-2 overflow-hidden mr-2">
-                                {order.vouchers?.slice(0, 3).map((v, i) => (
-                                    <div
-                                        key={v.id}
-                                        title={`Voucher ${v.voucher_no}: ${v.total_received} pcs`}
-                                        className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-emerald-100 flex items-center justify-center text-[8px] font-black text-emerald-700"
-                                    >
-                                        V
-                                    </div>
-                                ))}
-                            </div>
-
-                            <button
-                                onClick={() => onEditClick(order)}
-                                className="p-2 text-brand-600 hover:text-brand-800"
-                                title="Edit Work Order"
-                            >
-                                <Edit className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const url = `#/work-orders/${order.id}/print`;
-                                    window.open(
-                                        url,
-                                        "PrintWindow",
-                                        "width=900,height=800,scrollbars=yes",
-                                    );
-                                }}
-                                className="p-2 text-gray-400 hover:text-gray-600"
-                                title="Print Work Order"
-                            >
-                                <Printer className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const totalReceived =
-                                        order.vouchers?.reduce(
-                                            (sum, v) =>
-                                                sum + Number(v.total_received),
-                                            0,
-                                        ) || 0;
-                                    const totalDue =
-                                        (order.no_of_pieces || 0) -
-                                        totalReceived;
-
-                                    setVoucherInitialData({
-                                        type: "work-order",
-                                        id: order.id,
-                                        totalDue: totalDue > 0 ? totalDue : 0,
-                                        description: `Return for Work Order #${String(order.id).slice(-6).toUpperCase()}`,
-                                    });
-                                    setIsVoucherModalOpen(true);
-                                }}
-                                className="p-2 text-emerald-500 hover:text-emerald-700"
-                                title="Create Voucher"
-                            >
-                                <CreditCard className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setPaymentVoucherInitialData({
-                                        type: "work-order",
-                                        id: order.id,
-                                        totalDue: 0,
-                                        description: `Payment for Work Order #${String(order.id).slice(-6).toUpperCase()}`,
-                                    });
-                                    setIsPaymentVoucherModalOpen(true);
-                                }}
-                                className="p-2 text-blue-500 hover:text-blue-700"
-                                title="Create Payment Voucher"
-                            >
-                                <svg
-                                    className="w-5 h-5"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                                </svg>
-                            </button>
-                            <button
-                                onClick={() => handleDelete(order.id)}
-                                className="p-2 text-red-400 hover:text-red-600 font-bold"
-                                title="Delete"
-                            >
-                                <Trash2 className="w-5 h-5" />
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-        );
     };
 
     return (
@@ -534,55 +306,53 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
             <div className="flex justify-between items-center">
                 <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
-                    {(["all", "pending", "completed", "overdue"] as const).map(
-                        (f) => (
+                    {(
+                        [
+                            {
+                                key: "pending",
+                                label: "Pending",
+                                color: "amber",
+                            },
+                            {
+                                key: "completed",
+                                label: "Completed",
+                                color: "emerald",
+                            },
+                            { key: "paid", label: "Paid", color: "blue" },
+                        ] as const
+                    ).map(({ key: f, label, color }) => {
+                        const count = typeFilteredOrders.filter((o) => {
+                            const { isCompleted, isPaid } = getOrderStats(o);
+                            if (f === "pending") return !isCompleted;
+                            if (f === "completed")
+                                return isCompleted && !isPaid;
+                            if (f === "paid") return isPaid;
+                            return true;
+                        }).length;
+                        const isActive = filter === f;
+                        const activeClass =
+                            f === "pending"
+                                ? "bg-amber-500 text-white shadow-sm"
+                                : f === "completed"
+                                  ? "bg-emerald-600 text-white shadow-sm"
+                                  : "bg-blue-600 text-white shadow-sm";
+                        return (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
                                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-                                    filter === f
-                                        ? f === "overdue"
-                                            ? "bg-red-600 text-white shadow-sm"
-                                            : "bg-white text-brand-700 shadow-sm"
+                                    isActive
+                                        ? activeClass
                                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
                                 }`}
                             >
-                                {f.charAt(0).toUpperCase() + f.slice(1)}
-                                <span className="ml-2 opacity-60 text-xs">
-                                    (
-                                    {
-                                        typeFilteredOrders.filter((o) => {
-                                            const totalReceived =
-                                                o.vouchers?.reduce(
-                                                    (sum, v) =>
-                                                        sum +
-                                                        Number(
-                                                            v.total_received,
-                                                        ),
-                                                    0,
-                                                ) || 0;
-                                            const isCompleted =
-                                                o.no_of_pieces &&
-                                                totalReceived >= o.no_of_pieces;
-
-                                            if (f === "all") return true;
-                                            if (f === "pending")
-                                                return !isCompleted;
-                                            if (f === "completed")
-                                                return isCompleted;
-                                            if (f === "overdue")
-                                                return (
-                                                    !isCompleted &&
-                                                    o.deadline < today
-                                                );
-                                            return true;
-                                        }).length
-                                    }
-                                    )
+                                {label}
+                                <span className="ml-2 opacity-70 text-xs">
+                                    ({count})
                                 </span>
                             </button>
-                        ),
-                    )}
+                        );
+                    })}
                 </div>
                 <div className="flex items-center pr-4">
                     <button
@@ -600,30 +370,343 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                 </div>
             </div>
 
-            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 h-[600px] relative">
+            <div className="bg-white shadow-xl rounded-2xl overflow-x-auto border border-gray-100 max-h-[700px] relative">
                 {filteredOrders.length > 0 ? (
-                    <List
-                        rowCount={filteredOrders.length}
-                        rowHeight={100}
-                        style={{ height: 600, width: "100%" }}
-                        rowComponent={Row}
-                        rowProps={{}}
-                    />
+                    <table className="w-full text-left border-collapse min-w-[1000px]">
+                        <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100 text-sm text-gray-500 uppercase sticky top-0 z-10 shadow-sm">
+                                <th className="p-4 w-12 font-medium">Select</th>
+                                <th className="p-4 w-24 font-medium">Image</th>
+                                <th className="p-4 font-medium">
+                                    Work Details
+                                </th>
+                                <th className="p-4 font-medium">
+                                    Worker / Info
+                                </th>
+                                <th className="p-4 font-medium">
+                                    Quantities & Pricing
+                                </th>
+                                <th className="p-4 font-medium text-right">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {filteredOrders.map((order) => {
+                                const {
+                                    totalReceived,
+                                    isCompleted,
+                                    monetaryDue,
+                                    isPaid,
+                                } = getOrderStats(order);
+                                const isSelected = selectedIds.includes(
+                                    String(order.id),
+                                );
+                                const due =
+                                    (order.no_of_pieces || 0) - totalReceived;
+
+                                return (
+                                    <tr
+                                        key={order.id}
+                                        className={`hover:bg-gray-50 transition-colors ${isSelected ? "bg-brand-50/30" : "bg-white"}`}
+                                    >
+                                        <td className="p-4 align-middle">
+                                            <button
+                                                onClick={() =>
+                                                    toggleSelect(
+                                                        String(order.id),
+                                                    )
+                                                }
+                                                className="text-gray-400 hover:text-brand-600 transition-colors"
+                                            >
+                                                {isSelected ? (
+                                                    <CheckSquare className="w-5 h-5 text-brand-600" />
+                                                ) : (
+                                                    <Square className="w-5 h-5" />
+                                                )}
+                                            </button>
+                                        </td>
+                                        <td className="p-4 align-middle">
+                                            {order.image_url || order.image ? (
+                                                <img
+                                                    src={
+                                                        order.image_url ||
+                                                        order.image ||
+                                                        ""
+                                                    }
+                                                    alt="Job"
+                                                    className="w-16 h-16 object-cover rounded-md border border-gray-200"
+                                                />
+                                            ) : (
+                                                <div className="w-16 h-16 bg-gray-50 border border-dashed border-gray-200 rounded-md flex items-center justify-center text-gray-300">
+                                                    <Plus className="w-6 h-6" />
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="p-4 align-middle">
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="text-[10px] font-mono font-black text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded w-fit">
+                                                    {getWorkName(
+                                                        order.work_type_id,
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-lg text-gray-900 leading-tight">
+                                                        #
+                                                        {String(order.id)
+                                                            .slice(-6)
+                                                            .toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span
+                                                        className={`px-2 inline-flex text-[10px] uppercase font-black tracking-widest leading-5 rounded-full ${!isCompleted ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}
+                                                    >
+                                                        {isCompleted
+                                                            ? "COMPLETED"
+                                                            : "ACTIVE"}
+                                                    </span>
+                                                    {isPaid && (
+                                                        <span className="px-2 inline-flex text-[10px] uppercase font-black tracking-widest leading-5 rounded-full bg-blue-100 text-blue-700">
+                                                            PAID
+                                                        </span>
+                                                    )}
+                                                    {!isCompleted &&
+                                                        order.deadline <
+                                                            today && (
+                                                            <span className="px-2 inline-flex text-[10px] uppercase font-black tracking-widest leading-5 rounded-full bg-red-100 text-red-700">
+                                                                OVERDUE
+                                                            </span>
+                                                        )}
+                                                </div>
+                                                <div className="text-xs text-gray-400 mt-1">
+                                                    Deadline: {order.deadline}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-4 align-middle">
+                                            <div className="text-sm text-gray-500">
+                                                Worker:{" "}
+                                                <span className="font-medium text-gray-700">
+                                                    {getWorkerName(
+                                                        order.worker_id,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="text-sm text-gray-500">
+                                                Khilai:{" "}
+                                                <span className="font-medium text-gray-700">
+                                                    {getPurchaseInfo(
+                                                        order.purchase_id,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-400 mt-1">
+                                                Items:{" "}
+                                                {order.items?.length || 0}
+                                            </div>
+                                        </td>
+                                        <td className="p-4 align-middle">
+                                            <div className="text-sm flex flex-col gap-1">
+                                                <span className="text-gray-600 font-black">
+                                                    Rate: ₹{order.price_per_pc}
+                                                </span>
+
+                                                <span className="text-blue-600 font-bold">
+                                                    Total: {order.no_of_pieces}{" "}
+                                                    pcs
+                                                </span>
+
+                                                <span className="text-emerald-600 font-bold">
+                                                    Recv: {totalReceived} pcs
+                                                </span>
+
+                                                <span
+                                                    className={`font-black ${monetaryDue > 0 || due > 0 ? "text-red-500" : "text-emerald-600"}`}
+                                                >
+                                                    {monetaryDue > 0 || due > 0
+                                                        ? `Due: ${due} pcs`
+                                                        : "Balanced"}
+                                                    {order.price_per_pc && (
+                                                        <span className="ml-1 opacity-70">
+                                                            (₹
+                                                            {monetaryDue.toLocaleString()}
+                                                            )
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="p-4 align-middle text-right">
+                                            <div className="flex items-center justify-end gap-2 flex-wrap max-w-[150px] ml-auto">
+                                                {isTrashView ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleRestore(
+                                                                    order.id,
+                                                                )
+                                                            }
+                                                            className="p-2 text-emerald-600 hover:text-emerald-800"
+                                                            title="Restore"
+                                                        >
+                                                            <RotateCcw className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleForceDelete(
+                                                                    order.id,
+                                                                )
+                                                            }
+                                                            className="p-2 text-red-600 hover:text-red-800"
+                                                            title="Delete Permanently"
+                                                        >
+                                                            <Trash className="w-5 h-5" />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex -space-x-2 overflow-hidden mr-2">
+                                                            {order.vouchers
+                                                                ?.slice(0, 3)
+                                                                .map((v) => (
+                                                                    <div
+                                                                        key={
+                                                                            v.id
+                                                                        }
+                                                                        title={`Voucher ${v.voucher_no}: ${v.total_received} pcs`}
+                                                                        className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-emerald-100 flex items-center justify-center text-[8px] font-black text-emerald-700"
+                                                                    >
+                                                                        V
+                                                                    </div>
+                                                                ))}
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() =>
+                                                                onEditClick(
+                                                                    order,
+                                                                )
+                                                            }
+                                                            className="p-2 text-brand-600 hover:text-brand-800"
+                                                            title="Edit Work Order"
+                                                        >
+                                                            <Edit className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const url = `#/work-orders/${order.id}/print`;
+                                                                window.open(
+                                                                    url,
+                                                                    "PrintWindow",
+                                                                    "width=900,height=800,scrollbars=yes",
+                                                                );
+                                                            }}
+                                                            className="p-2 text-gray-400 hover:text-gray-600"
+                                                            title="Print Work Order"
+                                                        >
+                                                            <Printer className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setVoucherInitialData(
+                                                                    {
+                                                                        type: "work-order",
+                                                                        id: order.id,
+                                                                        totalDue:
+                                                                            due >
+                                                                            0
+                                                                                ? due
+                                                                                : 0,
+                                                                        description: `Return for Work Order #${String(order.id).slice(-6).toUpperCase()}`,
+                                                                    },
+                                                                );
+                                                                setIsVoucherModalOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            className="p-2 text-emerald-500 hover:text-emerald-700"
+                                                            title="Create Voucher"
+                                                        >
+                                                            <CreditCard className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const {
+                                                                    monetaryDue,
+                                                                } =
+                                                                    getOrderStats(
+                                                                        order,
+                                                                    );
+                                                                setPaymentVoucherInitialData(
+                                                                    {
+                                                                        type: "work-order",
+                                                                        id: order.id,
+                                                                        totalDue:
+                                                                            monetaryDue,
+                                                                        description: `Payment for Work Order #${String(order.id).slice(-6).toUpperCase()}`,
+                                                                    },
+                                                                );
+                                                                setIsPaymentVoucherModalOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            className="p-2 text-blue-500 hover:text-blue-700"
+                                                            title="Create Payment Voucher"
+                                                        >
+                                                            <svg
+                                                                className="w-5 h-5"
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                width="24"
+                                                                height="24"
+                                                                viewBox="0 0 24 24"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                strokeWidth="2"
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                            >
+                                                                <line
+                                                                    x1="12"
+                                                                    y1="1"
+                                                                    x2="12"
+                                                                    y2="23"
+                                                                ></line>
+                                                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    order.id,
+                                                                )
+                                                            }
+                                                            className="p-2 text-red-400 hover:text-red-600 font-bold"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500 p-12">
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500 p-12 min-h-[400px]">
                         <div className="mb-4">
                             <Trash2 className="w-16 h-16 text-gray-200" />
                         </div>
                         <p className="text-xl font-medium text-gray-900">
-                            No {filter === "all" ? "" : filter} work orders
-                            found
+                            No {filter} work orders found
                         </p>
                         <p className="mt-1">
                             {isTrashView
                                 ? "Your trash is empty"
-                                : filter === "all"
-                                  ? "Start by creating your first work order."
-                                  : "Try changing the filter to see more orders."}
+                                : "Try changing the filter to see more orders."}
                         </p>
                     </div>
                 )}

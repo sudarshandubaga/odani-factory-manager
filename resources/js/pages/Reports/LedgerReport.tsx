@@ -13,7 +13,7 @@ export const LedgerReport: React.FC = () => {
     const [toDate, setToDate] = useState("");
     const [selectedWorkerId, setSelectedWorkerId] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
-    const [expandedWorkers, setExpandedWorkers] = useState<Set<string>>(
+    const [expandedOrders, setExpandedOrders] = useState<Set<string>>(
         new Set(),
     );
 
@@ -216,20 +216,20 @@ export const LedgerReport: React.FC = () => {
         0,
     );
 
-    // Grouping by Worker
+    // Grouping by OrderId
     const groupedLedger: Record<string, any[]> = {};
     displayedLedger.forEach((row) => {
-        const wId = String(row.workerId);
-        if (!groupedLedger[wId]) groupedLedger[wId] = [];
-        groupedLedger[wId].push(row);
+        const oId = String(row.orderId);
+        if (!groupedLedger[oId]) groupedLedger[oId] = [];
+        groupedLedger[oId].push(row);
     });
 
-    const toggleWorker = (id: string | number) => {
+    const toggleOrder = (id: string | number) => {
         const sid = String(id);
-        const next = new Set(expandedWorkers);
+        const next = new Set(expandedOrders);
         if (next.has(sid)) next.delete(sid);
         else next.add(sid);
-        setExpandedWorkers(next);
+        setExpandedOrders(next);
     };
 
     const netBalance = Object.values(workerRunningStats).reduce(
@@ -316,7 +316,7 @@ export const LedgerReport: React.FC = () => {
             </div>
 
             {/* Printable Report */}
-            <div className="min-h-screen bg-white text-black max-w-[210mm] mx-auto p-6 print:p-0 print:max-w-none">
+            <div className="min-h-screen bg-white text-black mx-auto p-6 print:p-0 print:max-w-none">
                 {/* Header */}
                 <div className="text-center border-b-2 border-black pb-4 mb-6">
                     <h1 className="text-2xl font-bold uppercase">
@@ -439,10 +439,12 @@ export const LedgerReport: React.FC = () => {
                     </thead>
                     <tbody>
                         {Object.entries(groupedLedger).map(
-                            ([workerId, activities]) => {
-                                const isExpanded =
-                                    expandedWorkers.has(workerId);
-                                const workerName = activities[0].workerName;
+                            ([orderId, activities]) => {
+                                const isExpanded = expandedOrders.has(orderId);
+                                const firstActivity = activities[0];
+                                const workerName = firstActivity.workerName;
+                                const orderTitle = firstActivity.details;
+                                const source = firstActivity.source;
                                 const wAssigned = activities.reduce(
                                     (s, a) => s + a.assigned,
                                     0,
@@ -466,12 +468,10 @@ export const LedgerReport: React.FC = () => {
                                 const wNetDue = lastActivity.monetaryBalance;
 
                                 return (
-                                    <React.Fragment key={workerId}>
-                                        {/* Worker Summary Row */}
+                                    <React.Fragment key={orderId}>
+                                        {/* Order Summary Row */}
                                         <tr
-                                            onClick={() =>
-                                                toggleWorker(workerId)
-                                            }
+                                            onClick={() => toggleOrder(orderId)}
                                             className="bg-gray-100/80 cursor-pointer hover:bg-gray-200 transition-colors border-y border-black"
                                         >
                                             <td
@@ -486,17 +486,24 @@ export const LedgerReport: React.FC = () => {
                                                     )}
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center">
-                                                            <User className="w-4 h-4 text-brand-600" />
+                                                            <span className="text-[10px] font-black text-brand-600">
+                                                                {source ===
+                                                                "Khilai"
+                                                                    ? "K"
+                                                                    : "W"}
+                                                            </span>
                                                         </div>
                                                         <div>
                                                             <span className="font-black text-xs uppercase tracking-wider">
-                                                                {workerName}
+                                                                {orderTitle}
                                                             </span>
                                                             <p className="text-[9px] text-gray-500 font-bold">
+                                                                Worker:{" "}
+                                                                {workerName} |{" "}
                                                                 {
                                                                     activities.length
                                                                 }{" "}
-                                                                Transactions
+                                                                entries
                                                             </p>
                                                         </div>
                                                     </div>
