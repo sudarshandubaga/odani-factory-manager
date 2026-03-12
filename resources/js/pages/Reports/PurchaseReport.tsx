@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { storage } from "../../services/storage";
 import { COMPANY_NAME, COMPANY_ADDRESS, TERMS } from "../../constants";
 import { Purchase, Worker } from "../../types";
+import { formatNumber } from "../../utils";
 
 export const PurchaseReport: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -60,7 +61,21 @@ export const PurchaseReport: React.FC = () => {
                             </p>
                             <p>
                                 <span className="font-bold">Pat Size:</span>{" "}
-                                {purchase.pat_size} m
+                                {formatNumber(purchase.pat_size)} m
+                            </p>
+                            <p>
+                                <span className="font-bold">Rate:</span> ₹
+                                {formatNumber(purchase.price_per_pc || 0)}
+                            </p>
+                            <p>
+                                <span className="font-bold">Total Amount:</span>{" "}
+                                <span className="text-blue-700 font-bold">
+                                    ₹
+                                    {formatNumber(
+                                        (purchase.total_pieces || 0) *
+                                            (purchase.price_per_pc || 0),
+                                    )}
+                                </span>
                             </p>
                         </div>
                     </div>
@@ -98,13 +113,13 @@ export const PurchaseReport: React.FC = () => {
                                     {item.s_no}
                                 </td>
                                 <td className="border border-black px-2 py-1 text-center">
-                                    {item.size_meters}
+                                    {formatNumber(item.size_meters)}
                                 </td>
                                 <td className="border border-black px-2 py-1 text-center">
-                                    {item.pat_round}
+                                    {formatNumber(item.pat_round)}
                                 </td>
                                 <td className="border border-black px-2 py-1 text-center font-bold">
-                                    {item.pieces_round}
+                                    {formatNumber(item.pieces_round)}
                                 </td>
                             </tr>
                         ))}
@@ -118,15 +133,19 @@ export const PurchaseReport: React.FC = () => {
                                 Total
                             </td>
                             <td className="border border-black px-2 py-1 text-center">
-                                {(purchase.items || []).reduce(
-                                    (s, i) => s + i.pat_round,
-                                    0,
+                                {formatNumber(
+                                    (purchase.items || []).reduce(
+                                        (s, i) => s + i.pat_round,
+                                        0,
+                                    ),
                                 )}
                             </td>
                             <td className="border border-black px-2 py-1 text-center">
-                                {(purchase.items || []).reduce(
-                                    (s, i) => s + i.pieces_round,
-                                    0,
+                                {formatNumber(
+                                    (purchase.items || []).reduce(
+                                        (s, i) => s + i.pieces_round,
+                                        0,
+                                    ),
                                 )}
                             </td>
                         </tr>
@@ -162,7 +181,7 @@ export const PurchaseReport: React.FC = () => {
                                             {v.voucher_no}
                                         </td>
                                         <td className="border border-black px-2 py-1 text-right font-bold">
-                                            {v.total_received}
+                                            {formatNumber(v.total_received)}
                                         </td>
                                     </tr>
                                 ))}
@@ -176,10 +195,13 @@ export const PurchaseReport: React.FC = () => {
                                         Total Received (Pcs)
                                     </td>
                                     <td className="border border-black px-2 py-1 text-right">
-                                        {purchase.vouchers.reduce(
-                                            (sum, v) =>
-                                                sum + Number(v.total_received),
-                                            0,
+                                        {formatNumber(
+                                            purchase.vouchers.reduce(
+                                                (sum, v) =>
+                                                    sum +
+                                                    Number(v.total_received),
+                                                0,
+                                            ),
                                         )}
                                     </td>
                                 </tr>
@@ -191,17 +213,22 @@ export const PurchaseReport: React.FC = () => {
                                         Total Due (Pcs)
                                     </td>
                                     <td className="border border-black px-2 py-1 text-right">
-                                        {(purchase.items || []).reduce(
-                                            (sum, i) =>
-                                                sum + Number(i.pieces_round),
-                                            0,
-                                        ) -
-                                            purchase.vouchers.reduce(
-                                                (sum, v) =>
+                                        {formatNumber(
+                                            (purchase.items || []).reduce(
+                                                (sum, i) =>
                                                     sum +
-                                                    Number(v.total_received),
+                                                    Number(i.pieces_round),
                                                 0,
-                                            )}
+                                            ) -
+                                                purchase.vouchers.reduce(
+                                                    (sum, v) =>
+                                                        sum +
+                                                        Number(
+                                                            v.total_received,
+                                                        ),
+                                                    0,
+                                                ),
+                                        )}
                                     </td>
                                 </tr>
                             </tfoot>
@@ -239,7 +266,7 @@ export const PurchaseReport: React.FC = () => {
                                                     {v.voucher_no}
                                                 </td>
                                                 <td className="border border-black px-2 py-1 text-right font-bold text-blue-700">
-                                                    ₹{v.price}
+                                                    ₹{formatNumber(v.price)}
                                                 </td>
                                             </tr>
                                         ),

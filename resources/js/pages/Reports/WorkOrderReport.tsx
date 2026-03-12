@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { storage } from "../../services/storage";
 import { COMPANY_NAME } from "../../constants";
 import { WorkOrder, Purchase, Worker, WorkType } from "../../types";
+import { formatNumber } from "../../utils";
 
 export const WorkOrderReport: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -147,7 +148,7 @@ export const WorkOrderReport: React.FC = () => {
                                     Assigned Pieces
                                 </div>
                                 <div className="text-2xl font-black">
-                                    {order.no_of_pieces}
+                                    {formatNumber(order.no_of_pieces)}
                                 </div>
                             </div>
                         )}
@@ -156,10 +157,13 @@ export const WorkOrderReport: React.FC = () => {
                                 Completed (VCH)
                             </div>
                             <div className="text-2xl font-black">
-                                {order.vouchers?.reduce(
-                                    (sum, v) => sum + Number(v.total_received),
-                                    0,
-                                ) || 0}
+                                {formatNumber(
+                                    order.vouchers?.reduce(
+                                        (sum, v) =>
+                                            sum + Number(v.total_received),
+                                        0,
+                                    ) || 0,
+                                )}
                             </div>
                         </div>
                         <div className="border border-black p-2 rounded text-center">
@@ -167,14 +171,17 @@ export const WorkOrderReport: React.FC = () => {
                                 Balance Due
                             </div>
                             <div className="text-2xl font-black text-red-600">
-                                {Math.max(
-                                    0,
-                                    (order.no_of_pieces || 0) -
-                                        (order.vouchers?.reduce(
-                                            (sum, v) =>
-                                                sum + Number(v.total_received),
-                                            0,
-                                        ) || 0),
+                                {formatNumber(
+                                    Math.max(
+                                        0,
+                                        (order.no_of_pieces || 0) -
+                                            (order.vouchers?.reduce(
+                                                (sum, v) =>
+                                                    sum +
+                                                    Number(v.total_received),
+                                                0,
+                                            ) || 0),
+                                    ),
                                 )}
                             </div>
                         </div>
@@ -212,10 +219,10 @@ export const WorkOrderReport: React.FC = () => {
                                                 {v.voucher_no}
                                             </td>
                                             <td className="border border-black p-1 text-right font-bold">
-                                                {v.total_received}
+                                                {formatNumber(v.total_received)}
                                             </td>
                                             <td className="border border-black p-1 text-right">
-                                                {v.balance}
+                                                {formatNumber(v.balance)}
                                             </td>
                                         </tr>
                                     ))}
@@ -254,7 +261,7 @@ export const WorkOrderReport: React.FC = () => {
                                                         {v.voucher_no}
                                                     </td>
                                                     <td className="border border-black p-1 text-right font-bold text-blue-700">
-                                                        ₹{v.price}
+                                                        ₹{formatNumber(v.price)}
                                                     </td>
                                                 </tr>
                                             ),

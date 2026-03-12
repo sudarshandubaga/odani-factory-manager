@@ -15,6 +15,7 @@ import {
 import { NewVoucherModal } from "../../components/NewVoucherModal";
 import { NewPaymentVoucherModal } from "../../components/NewPaymentVoucherModal";
 import { toast } from "react-hot-toast";
+import { formatNumber } from "../../utils";
 
 interface WorkOrderListProps {
     onCreateClick: () => void;
@@ -509,28 +510,27 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                                         <td className="p-4 align-middle">
                                             <div className="text-sm flex flex-col gap-1">
                                                 <span className="text-gray-600 font-black">
-                                                    Rate: ₹{order.price_per_pc}
+                                                    Rate: ₹{formatNumber(order.price_per_pc)}
                                                 </span>
 
                                                 <span className="text-blue-600 font-bold">
-                                                    Total: {order.no_of_pieces}{" "}
-                                                    pcs
+                                                    Total: {formatNumber(order.no_of_pieces)} pcs
                                                 </span>
 
                                                 <span className="text-emerald-600 font-bold">
-                                                    Recv: {totalReceived} pcs
+                                                    Recv: {formatNumber(totalReceived)} pcs
                                                 </span>
 
                                                 <span
                                                     className={`font-black ${monetaryDue > 0 || due > 0 ? "text-red-500" : "text-emerald-600"}`}
                                                 >
                                                     {monetaryDue > 0 || due > 0
-                                                        ? `Due: ${due} pcs`
+                                                        ? `Due: ${formatNumber(due)} pcs`
                                                         : "Balanced"}
                                                     {order.price_per_pc && (
                                                         <span className="ml-1 opacity-70">
                                                             (₹
-                                                            {monetaryDue.toLocaleString()}
+                                                            {formatNumber(monetaryDue)}
                                                             )
                                                         </span>
                                                     )}

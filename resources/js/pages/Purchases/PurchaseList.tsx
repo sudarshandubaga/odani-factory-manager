@@ -21,6 +21,7 @@ import {
 import { NewVoucherModal } from "../../components/NewVoucherModal";
 import { NewPaymentVoucherModal } from "../../components/NewPaymentVoucherModal";
 import { toast } from "react-hot-toast";
+import { formatNumber } from "../../utils";
 
 interface PurchaseListProps {
     onCreateClick: () => void;
@@ -306,23 +307,20 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                     </div>
                                     <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
                                         {p.price_per_pc
-                                            ? `₹${p.price_per_pc}`
+                                            ? `₹${formatNumber(p.price_per_pc)}`
                                             : "—"}
                                     </div>
                                     <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold">
-                                        {p.total_pieces}
+                                        {formatNumber(p.total_pieces)}
                                     </div>
                                     <div className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-black">
-                                        {received}
+                                        {formatNumber(received)}
                                     </div>
                                     <div className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-black">
-                                        {due}
+                                        {formatNumber(due)}
                                     </div>
                                     <div className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-black">
-                                        ₹
-                                        {(
-                                            due * (p.price_per_pc || 0)
-                                        ).toLocaleString()}
+                                        ₹{formatNumber(due * (p.price_per_pc || 0))}
                                     </div>
                                     <div className="px-6 py-4 whitespace-nowrap flex justify-end gap-3 text-end text-sm font-medium">
                                         {isTrashView ? (
@@ -498,8 +496,10 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                             </span>
                                             <span className="font-black text-brand-700">
                                                 ₹
-                                                {selectedPurchaseDetails.price_per_pc ||
-                                                    0}
+                                                {formatNumber(
+                                                    selectedPurchaseDetails.price_per_pc ||
+                                                        0,
+                                                )}
                                             </span>
                                         </div>
                                         {selectedPurchaseDetails.item_type ===
@@ -519,9 +519,9 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                                 Total Pieces:
                                             </span>
                                             <span className="font-bold">
-                                                {
-                                                    selectedPurchaseDetails.total_pieces
-                                                }
+                                                {formatNumber(
+                                                    selectedPurchaseDetails.total_pieces,
+                                                )}
                                             </span>
                                         </div>
                                         <div className="flex justify-between text-sm border-t-2 border-brand-200 pt-2 mt-2">
@@ -530,16 +530,16 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                             </span>
                                             <span className="font-black text-brand-900 text-lg">
                                                 ₹
-                                                {(
+                                                {formatNumber(
                                                     Number(
                                                         selectedPurchaseDetails.total_pieces ||
                                                             0,
                                                     ) *
-                                                    Number(
-                                                        selectedPurchaseDetails.price_per_pc ||
-                                                            0,
-                                                    )
-                                                ).toLocaleString()}
+                                                        Number(
+                                                            selectedPurchaseDetails.price_per_pc ||
+                                                                0,
+                                                        ),
+                                                )}
                                             </span>
                                         </div>
                                     </div>
@@ -637,11 +637,13 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                                 </td>
                                                 <td className="px-4 py-3"></td>
                                                 <td className="px-4 py-3 text-brand-600 font-bold">
-                                                    {selectedPurchaseDetails.items?.reduce(
-                                                        (sum, i) =>
-                                                            sum +
-                                                            i.pieces_round,
-                                                        0,
+                                                    {formatNumber(
+                                                        selectedPurchaseDetails.items?.reduce(
+                                                            (sum, i) =>
+                                                                sum +
+                                                                i.pieces_round,
+                                                            0,
+                                                        ),
                                                     )}{" "}
                                                     Pcs
                                                 </td>
@@ -701,13 +703,15 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                                     Total Recieved (Pcs):
                                                 </span>
                                                 <span className="text-lg font-black text-emerald-600">
-                                                    {selectedPurchaseDetails.vouchers.reduce(
-                                                        (sum, v) =>
-                                                            sum +
-                                                            Number(
-                                                                v.total_received,
-                                                            ),
-                                                        0,
+                                                    {formatNumber(
+                                                        selectedPurchaseDetails.vouchers.reduce(
+                                                            (sum, v) =>
+                                                                sum +
+                                                                Number(
+                                                                    v.total_received,
+                                                                ),
+                                                            0,
+                                                        ),
                                                     )}
                                                 </span>
                                             </div>
@@ -716,16 +720,18 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                                     Total Due (Pcs):
                                                 </span>
                                                 <span className="text-lg font-black text-red-600">
-                                                    {(selectedPurchaseDetails.total_pieces ||
-                                                        0) -
-                                                        selectedPurchaseDetails.vouchers.reduce(
-                                                            (sum, v) =>
-                                                                sum +
-                                                                Number(
-                                                                    v.total_received,
-                                                                ),
-                                                            0,
-                                                        )}
+                                                    {formatNumber(
+                                                        (selectedPurchaseDetails.total_pieces ||
+                                                            0) -
+                                                            selectedPurchaseDetails.vouchers.reduce(
+                                                                (sum, v) =>
+                                                                    sum +
+                                                                    Number(
+                                                                        v.total_received,
+                                                                    ),
+                                                                0,
+                                                            ),
+                                                    )}
                                                 </span>
                                             </div>
                                         </div>

@@ -4,6 +4,7 @@ import { PurchaseItem, Worker } from "../../types";
 import { Trash, Save, FilePlus, ChevronLeft } from "lucide-react";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { NewWorkerModal } from "../../components/NewWorkerModal";
+import { formatNumber } from "../../utils";
 
 interface PurchaseAddProps {
     onCancel: () => void;
@@ -410,16 +411,16 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
                                                 />
                                             </div>
                                             <div className="col-span-1 text-gray-600">
-                                                {item.patRaw.toFixed(2)}
+                                                {formatNumber(item.patRaw)}
                                             </div>
                                             <div className="col-span-1 font-medium">
-                                                {item.patRound}
+                                                {formatNumber(item.patRound)}
                                             </div>
                                             <div className="col-span-1 text-gray-600">
-                                                {item.piecesRaw}
+                                                {formatNumber(item.piecesRaw)}
                                             </div>
                                             <div className="col-span-1 font-bold text-brand-700">
-                                                {item.piecesRound}
+                                                {formatNumber(item.piecesRound)}
                                             </div>
                                             <div className="col-span-1">
                                                 <button

@@ -28,12 +28,13 @@ class PurchaseController extends Controller
             'items.*.pieces_round' => 'nullable|integer',
             'item_type' => 'nullable|string',
             'total_pieces' => 'nullable|numeric',
+            'price_per_pc' => 'nullable|numeric',
         ]);
 
         $totalPieces = 0;
         if ($validated['item_type'] == 'lot') {
             foreach ($validated['items'] as $item) {
-                $totalPieces += $item['pieces_raw'];
+                $totalPieces += $item['pieces_round'];
             }
         } else {
             $totalPieces = $validated['total_pieces'];
@@ -46,6 +47,7 @@ class PurchaseController extends Controller
             'pat_size' => $validated['pat_size'],
             'item_type' => $validated['item_type'],
             'total_pieces' => $totalPieces,
+            'price_per_pc' => $validated['price_per_pc'] ?? 0,
         ]);
 
         foreach ($validated['items'] as $item) {
@@ -80,6 +82,7 @@ class PurchaseController extends Controller
             'items.*.pieces_round' => 'nullable|integer',
             'item_type' => 'nullable|string',
             'total_pieces' => 'nullable|numeric',
+            'price_per_pc' => 'nullable|numeric',
         ]);
 
         $totalPieces = 0;
@@ -98,6 +101,7 @@ class PurchaseController extends Controller
             'pat_size' => $validated['pat_size'],
             'item_type' => $validated['item_type'] ?? $purchase->item_type,
             'total_pieces' => $totalPieces,
+            'price_per_pc' => $validated['price_per_pc'] ?? $purchase->price_per_pc,
         ]);
 
         if (isset($validated['items'])) {

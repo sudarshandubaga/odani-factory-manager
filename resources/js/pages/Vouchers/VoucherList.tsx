@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { NewVoucherModal } from "../../components/NewVoucherModal";
 import { toast } from "react-hot-toast";
+import { formatNumber } from "../../utils";
 
 export const VoucherList: React.FC = () => {
     const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -306,7 +307,7 @@ export const VoucherList: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900 text-right">
-                                        {v.total_received}
+                                        {formatNumber(v.total_received)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
                                         <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -440,7 +441,9 @@ export const VoucherList: React.FC = () => {
                                                 Pieces Received:
                                             </span>
                                             <span className="text-xl font-black text-emerald-600">
-                                                {selectedVoucher.total_received}{" "}
+                                                {formatNumber(
+                                                    selectedVoucher.total_received,
+                                                )}{" "}
                                                 pcs
                                             </span>
                                         </div>
@@ -449,7 +452,10 @@ export const VoucherList: React.FC = () => {
                                                 Total Due:
                                             </span>
                                             <span className="font-bold text-gray-900">
-                                                {selectedVoucher.total_due} pcs
+                                                {formatNumber(
+                                                    selectedVoucher.total_due,
+                                                )}{" "}
+                                                pcs
                                             </span>
                                         </div>
                                         <div className="border-t pt-2 flex justify-between items-center">
@@ -457,7 +463,10 @@ export const VoucherList: React.FC = () => {
                                                 Remaining Balance:
                                             </span>
                                             <span className="font-bold text-red-600">
-                                                {selectedVoucher.balance} pcs
+                                                {formatNumber(
+                                                    selectedVoucher.balance,
+                                                )}{" "}
+                                                pcs
                                             </span>
                                         </div>
                                     </div>

@@ -137,5 +137,6 @@ export interface PaymentVoucher {
     price: number;
     total_due: number;
     description?: string;
+    image?: string;
     created_at: string;
 }

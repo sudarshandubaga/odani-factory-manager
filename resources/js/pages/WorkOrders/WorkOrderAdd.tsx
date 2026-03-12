@@ -9,6 +9,7 @@ import {
 } from "../../types";
 
 import { toast } from "react-hot-toast";
+import { formatNumber } from "../../utils";
 
 interface WorkOrderAddProps {
     onCancel: () => void;
@@ -366,6 +367,7 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                             </label>
                             <input
                                 type="number"
+                                step="0.01"
                                 min="0"
                                 className="block w-full border-gray-300 rounded-lg shadow-sm border p-3 focus:ring-brand-500 focus:border-brand-500"
                                 value={noOfPieces}
@@ -499,8 +501,8 @@ export const WorkOrderAdd: React.FC<WorkOrderAddProps> = ({
                                             <div
                                                 className={`text-xs mt-1 ${selectedItems.has(item.id) ? "text-brand-50" : "text-gray-500"}`}
                                             >
-                                                {item.size_meters}m |{" "}
-                                                {item.pieces_round} pcs
+                                                {formatNumber(item.size_meters)}m |{" "}
+                                                {formatNumber(item.pieces_round)} pcs
                                             </div>
                                         </div>
                                     ))}

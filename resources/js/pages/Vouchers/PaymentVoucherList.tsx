@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { NewPaymentVoucherModal } from "../../components/NewPaymentVoucherModal";
 import { toast } from "react-hot-toast";
+import { formatNumber } from "../../utils";
 
 export const PaymentVoucherList: React.FC = () => {
     const [paymentVouchers, setPaymentVouchers] = useState<PaymentVoucher[]>([]);
@@ -306,7 +307,7 @@ export const PaymentVoucherList: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900 text-right">
-                                        {v.price}
+                                        ₹{formatNumber(v.price)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
                                         <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -440,8 +441,7 @@ export const PaymentVoucherList: React.FC = () => {
                                                 Pieces Received:
                                             </span>
                                             <span className="text-xl font-black text-emerald-600">
-                                                {selectedPaymentVoucher.price}{" "}
-                                               
+                                                ₹{formatNumber(selectedPaymentVoucher.price)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center">
@@ -449,7 +449,7 @@ export const PaymentVoucherList: React.FC = () => {
                                                 Total Due:
                                             </span>
                                             <span className="font-bold text-gray-900">
-                                                {selectedPaymentVoucher.total_due}
+                                                ₹{formatNumber(selectedPaymentVoucher.total_due)}
                                             </span>
                                         </div>
                                         <div className="border-t pt-2 flex justify-between items-center">
@@ -457,7 +457,14 @@ export const PaymentVoucherList: React.FC = () => {
                                                 Remaining Balance:
                                             </span>
                                             <span className="font-bold text-red-600">
-                                                {Math.max(0, selectedPaymentVoucher.total_due - (selectedPaymentVoucher.price || 0))}
+                                                ₹{formatNumber(
+                                                    Math.max(
+                                                        0,
+                                                        selectedPaymentVoucher.total_due -
+                                                            (selectedPaymentVoucher.price ||
+                                                                0),
+                                                    ),
+                                                )}
                                             </span>
                                         </div>
                                     </div>

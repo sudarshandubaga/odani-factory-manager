@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { storage } from "../../services/storage";
 import { WorkOrder, Purchase, Worker, WorkType } from "../../types";
 import { COMPANY_NAME } from "../../constants";
+import { formatNumber } from "../../utils";
 
 export const OverdueWorkOrdersReport: React.FC = () => {
     const [orders, setOrders] = useState<WorkOrder[]>([]);
@@ -130,7 +131,7 @@ export const OverdueWorkOrdersReport: React.FC = () => {
                                         {order.deadline}
                                     </td>
                                     <td className="border border-black px-2 py-1 text-center">
-                                        {order.items?.length || 0}
+                                        {formatNumber(order.items?.length || 0)}
                                     </td>
                                 </tr>
                             ))

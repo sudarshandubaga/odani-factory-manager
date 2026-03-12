@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { storage } from "../../services/storage";
 import { Link } from "react-router-dom";
 import { FileText, ClipboardCheck, Users } from "lucide-react";
+import { formatNumber } from "../../utils";
 
 export const Dashboard: React.FC = () => {
     const [purchases, setPurchases] = useState<any[]>([]);
@@ -143,8 +144,8 @@ export const Dashboard: React.FC = () => {
                             <div className="mt-2 sm:flex sm:justify-between">
                                 <div className="sm:flex">
                                     <p className="flex items-center text-sm text-gray-500">
-                                        Total Items:{" "}
-                                        {purchase.items?.length || 0}
+                                        Total Pieces:{" "}
+                                        {formatNumber(purchase.total_pieces || 0)}
                                     </p>
                                 </div>
                             </div>

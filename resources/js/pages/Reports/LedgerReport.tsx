@@ -3,6 +3,7 @@ import { storage } from "../../services/storage";
 import { COMPANY_NAME } from "../../constants";
 import { Purchase, WorkOrder, Worker } from "../../types";
 import { Printer, ChevronDown, ChevronRight, User } from "lucide-react";
+import { formatNumber } from "../../utils";
 
 export const LedgerReport: React.FC = () => {
     const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -349,7 +350,7 @@ export const LedgerReport: React.FC = () => {
                             Assigned
                         </div>
                         <div className="text-sm md:text-xl font-black">
-                            {totalAssigned}
+                            {formatNumber(totalAssigned)}
                         </div>
                     </div>
                     <div className="border border-green-700 bg-green-50 p-2 rounded">
@@ -357,7 +358,7 @@ export const LedgerReport: React.FC = () => {
                             Received
                         </div>
                         <div className="text-sm md:text-xl font-black text-green-800">
-                            {totalReceived}
+                            {formatNumber(totalReceived)}
                         </div>
                     </div>
                     <div className="border border-amber-700 bg-amber-50 p-2 rounded">
@@ -365,7 +366,7 @@ export const LedgerReport: React.FC = () => {
                             Earned (₹)
                         </div>
                         <div className="text-sm md:text-xl font-black text-amber-800">
-                            ₹{totalEarned.toLocaleString()}
+                            ₹{formatNumber(totalEarned)}
                         </div>
                     </div>
                     <div className="border border-purple-700 bg-purple-50 p-2 rounded">
@@ -373,7 +374,7 @@ export const LedgerReport: React.FC = () => {
                             Paid (₹)
                         </div>
                         <div className="text-sm md:text-xl font-black text-purple-800">
-                            ₹{totalPaid.toLocaleString()}
+                            ₹{formatNumber(totalPaid)}
                         </div>
                     </div>
                     <div className="border border-red-600 bg-red-50 p-2 rounded">
@@ -383,7 +384,7 @@ export const LedgerReport: React.FC = () => {
                         <div
                             className={`text-sm md:text-xl font-black ${netBalance < 0 ? "text-red-700" : netBalance > 0 ? "text-green-700" : "text-gray-900"}`}
                         >
-                            {netBalance}
+                            {formatNumber(netBalance)}
                         </div>
                     </div>
                     <div className="border border-blue-600 bg-blue-50 p-2 rounded shadow-sm">
@@ -393,7 +394,7 @@ export const LedgerReport: React.FC = () => {
                         <div
                             className={`text-sm md:text-xl font-black ${totalMonetaryDue > 0 ? "text-blue-700" : "text-gray-900"}`}
                         >
-                            ₹{totalMonetaryDue.toLocaleString()}
+                            ₹{formatNumber(totalMonetaryDue)}
                         </div>
                     </div>
                 </div>
@@ -517,25 +518,25 @@ export const LedgerReport: React.FC = () => {
                                                     </span>
                                                     <span className="font-black text-amber-900">
                                                         ₹
-                                                        {wEarned.toLocaleString()}
+                                                        {formatNumber(wEarned)}
                                                     </span>
                                                 </div>
                                             </td>
                                             <td className="px-2 py-3 text-center font-black text-gray-900 border-x border-black/10">
                                                 {wAssigned > 0
-                                                    ? `${wAssigned} pcs`
+                                                    ? `${formatNumber(wAssigned)} pcs`
                                                     : "—"}
                                             </td>
                                             <td className="px-2 py-3 text-center font-black text-emerald-800 border-x border-black/10 bg-emerald-50/30">
                                                 <div className="flex flex-col gap-0.5">
                                                     {wReceived > 0 && (
                                                         <span className="text-emerald-700">
-                                                            +{wReceived} pcs
+                                                            +{formatNumber(wReceived)} pcs
                                                         </span>
                                                     )}
                                                     {wPaid > 0 && (
                                                         <span className="text-purple-700">
-                                                            ₹{wPaid} Paid
+                                                            ₹{formatNumber(wPaid)} Paid
                                                         </span>
                                                     )}
                                                     {wReceived === 0 &&
@@ -544,21 +545,21 @@ export const LedgerReport: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-2 py-3 text-center border-x border-black/10 text-gray-400">
-                                                {wReceived}
+                                                {formatNumber(wReceived)}
                                             </td>
                                             <td className="px-2 py-3 text-center border-x border-black/10 text-red-600 font-bold">
-                                                {Math.max(
+                                                {formatNumber(Math.max(
                                                     0,
                                                     wAssigned - wReceived,
-                                                )}
+                                                ))}
                                             </td>
                                             <td
                                                 className={`px-2 py-3 text-right font-black border-x border-black/10 bg-gray-50/50 ${wBalance < 0 ? "text-red-700" : wBalance > 0 ? "text-emerald-700" : "text-gray-900"}`}
                                             >
-                                                {wBalance} pcs
+                                                {formatNumber(wBalance)} pcs
                                             </td>
                                             <td className="px-2 py-3 text-right font-black border-x border-black/10 bg-blue-50/50 text-blue-800">
-                                                ₹{wNetDue.toLocaleString()}
+                                                ₹{formatNumber(wNetDue)}
                                             </td>
                                         </tr>
 
@@ -595,43 +596,43 @@ export const LedgerReport: React.FC = () => {
                                                     </td>
                                                     <td className="border border-black/10 px-2 py-1.5 text-center text-gray-400 font-bold">
                                                         {row.rate
-                                                            ? `₹${row.rate}`
+                                                            ? `₹${formatNumber(row.rate)}`
                                                             : "—"}
                                                     </td>
                                                     <td className="border border-black/10 px-2 py-1.5 text-center font-bold">
                                                         {row.assigned > 0
-                                                            ? `${row.assigned} pcs`
+                                                            ? `${formatNumber(row.assigned)} pcs`
                                                             : "—"}
                                                     </td>
                                                     <td className="border border-black/10 px-2 py-1.5 text-center font-bold">
                                                         {row.received > 0 ? (
                                                             <span className="text-emerald-600">
-                                                                +{row.received}{" "}
+                                                                +{formatNumber(row.received)}{" "}
                                                                 pcs
                                                             </span>
                                                         ) : row.type ===
                                                           "Payment" ? (
                                                             <span className="text-purple-700 font-black">
-                                                                ₹{row.amount}
+                                                                ₹{formatNumber(row.amount)}
                                                             </span>
                                                         ) : (
                                                             "—"
                                                         )}
                                                     </td>
                                                     <td className="border border-black/10 px-2 py-1.5 text-center text-gray-400">
-                                                        {row.completed}
+                                                        {formatNumber(row.completed)}
                                                     </td>
                                                     <td className="border border-black/10 px-2 py-1.5 text-center text-red-600 font-bold">
-                                                        {row.due}
+                                                        {formatNumber(row.due)}
                                                     </td>
                                                     <td
                                                         className={`border border-black/10 px-2 py-1.5 text-right font-bold bg-gray-50/30 ${row.balance < 0 ? "text-red-700" : row.balance > 0 ? "text-emerald-700" : "text-gray-900"}`}
                                                     >
-                                                        {row.balance} pcs
+                                                        {formatNumber(row.balance)} pcs
                                                     </td>
                                                     <td className="border border-black/10 px-2 py-1.5 text-right font-black bg-blue-50/20 text-blue-900">
                                                         ₹
-                                                        {row.monetaryBalance.toLocaleString()}
+                                                        {formatNumber(row.monetaryBalance)}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -660,10 +661,10 @@ export const LedgerReport: React.FC = () => {
                                 Totals
                             </td>
                             <td className="border border-black px-2 py-2 text-center">
-                                {totalAssigned}
+                                {formatNumber(totalAssigned)}
                             </td>
                             <td className="border border-black px-2 py-2 text-center text-emerald-700">
-                                {totalReceived}
+                                {formatNumber(totalReceived)}
                             </td>
                             <td
                                 colSpan={2}
@@ -672,7 +673,7 @@ export const LedgerReport: React.FC = () => {
                             <td
                                 className={`border border-black px-2 py-2 text-right ${netBalance < 0 ? "text-red-700" : netBalance > 0 ? "text-emerald-700" : ""}`}
                             >
-                                {netBalance}
+                                {formatNumber(netBalance)}
                             </td>
                         </tr>
                     </tfoot>

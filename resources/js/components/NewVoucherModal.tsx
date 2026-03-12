@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Save, Upload, Calculator } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { formatNumber } from "../utils";
 import { storage } from "../services/storage";
 import { Purchase, WorkOrder } from "../types";
 
@@ -42,10 +43,10 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({
 
     useEffect(() => {
         if (initialData) {
-            setTotalDue(initialData.totalDue);
-            setTotalReceived(initialData.totalReceived || 0);
+            setTotalDue(Number(initialData.totalDue || 0));
+            setTotalReceived(Number(initialData.totalReceived || 0));
             setDate(initialData.date || new Date().toISOString().split("T")[0]);
-            setBalance(initialData.totalDue - (initialData.totalReceived || 0));
+            setBalance(Number(initialData.totalDue || 0) - Number(initialData.totalReceived || 0));
             setDescription(initialData.description || "");
             if (initialData.image) {
                 setImagePreview(`/storage/${initialData.image}`);
@@ -177,6 +178,7 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({
                             </label>
                             <input
                                 type="number"
+                                step="0.01"
                                 value={totalReceived}
                                 onChange={(e) =>
                                     setTotalReceived(
@@ -196,7 +198,7 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({
                         <span
                             className={`text-lg font-black ${balance > 0 ? "text-amber-600" : "text-emerald-600"}`}
                         >
-                            {balance.toFixed(2)} pcs
+                            {formatNumber(balance)} pcs
                         </span>
                     </div>
 
