@@ -46,6 +46,8 @@ export interface Purchase {
     item_type: string;
     total_pieces: number;
     price_per_pc?: number;
+    payment_vouchers?: any[];
+    paymentVouchers?: any[];
 }
 
 export interface Worker {

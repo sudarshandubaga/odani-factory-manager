@@ -17,6 +17,9 @@ export const LedgerReport: React.FC = () => {
     const [expandedOrders, setExpandedOrders] = useState<Set<string>>(
         new Set(),
     );
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -41,9 +44,46 @@ export const LedgerReport: React.FC = () => {
     const getWorkerName = (id: any) =>
         workers.find((w) => w.id == id)?.name || "Unknown";
 
+    const orders = [...purchases, ...workOrders];
+
+    // Pre-calculate status for each order to use in filters
+    const orderStatuses = React.useMemo(() => {
+        const statuses: Record<string, string> = {};
+        orders.forEach((order) => {
+            const received =
+                order.vouchers?.reduce(
+                    (sum, v) => sum + Number(v.total_received),
+                    0,
+                ) || 0;
+            const assigned =
+                (order as any).total_pieces || (order as any).no_of_pieces || 0;
+            const duePcs = assigned - received;
+
+            const paymentVouchers =
+                (order as any).payment_vouchers ||
+                (order as any).paymentVouchers ||
+                [];
+            const totalPaid = paymentVouchers.reduce(
+                (sum: number, v: any) => sum + Number(v.price || 0),
+                0,
+            );
+            const totalAmount =
+                Number(assigned) * Number(order.price_per_pc || 0);
+            const monetaryDue = totalAmount - totalPaid;
+
+            if (duePcs > 0.1) {
+                statuses[String(order.id)] = "pending";
+            } else if (monetaryDue > 0.1) {
+                statuses[String(order.id)] = "completed";
+            } else {
+                statuses[String(order.id)] = "paid";
+            }
+        });
+        return statuses;
+    }, [purchases, workOrders, workers]);
+
     // 1. Combine all Assignments (Orders) and Vouchers into a single flat list
     const allActivities: any[] = [];
-    const orders = [...purchases, ...workOrders];
 
     orders.forEach((order) => {
         // Only include if worker matches filter
@@ -63,7 +103,7 @@ export const LedgerReport: React.FC = () => {
         const details =
             "total_pieces" in order
                 ? `Khilai #${(order as any).invoice_no}`
-                : `Job #${String(orderId).slice(-6).toUpperCase()}`;
+                : `Job #${String(orderId).slice(-6).toUpperCase()} (${(order as any).work_type?.name || (order as any).workType?.name || "Order"})`;
 
         // Assignment Entry
         allActivities.push({
@@ -135,16 +175,22 @@ export const LedgerReport: React.FC = () => {
         return a.sortPriority - b.sortPriority;
     });
 
-    // 3. Calculate per-worker running stats
+    // 3. Calculate per-worker running stats and per-order stats
     const workerRunningStats: Record<
         string,
         {
             balance: number;
-            monetaryBalance: number;
-            earned: number;
-            paid: number;
             assigned: Record<string, number>;
             received: Record<string, number>;
+        }
+    > = {};
+
+    // Per-order monetary stats (for individual group Net Due)
+    const orderMonetaryStats: Record<
+        string,
+        {
+            earned: number;
+            paid: number;
         }
     > = {};
 
@@ -155,36 +201,41 @@ export const LedgerReport: React.FC = () => {
         if (!workerRunningStats[wId]) {
             workerRunningStats[wId] = {
                 balance: 0,
-                monetaryBalance: 0,
-                earned: 0,
-                paid: 0,
                 assigned: {},
                 received: {},
             };
         }
 
+        if (!orderMonetaryStats[oId]) {
+            orderMonetaryStats[oId] = {
+                earned: 0,
+                paid: 0,
+            };
+        }
+
         const stats = workerRunningStats[wId];
+        const orderStats = orderMonetaryStats[oId];
         stats.assigned[oId] = (stats.assigned[oId] || 0) + activity.assigned;
         stats.received[oId] = (stats.received[oId] || 0) + activity.received;
 
-        // Piece balance: received - assigned
+        // Piece balance: received - assigned (worker-wide running)
         stats.balance = stats.balance + activity.received - activity.assigned;
 
-        // Monetary: Earned (from pieces received) - Paid (from payment vouchers)
-        const earnedFromThis = activity.received * (activity.rate || 0);
+        // Monetary: per-order earned and paid
+        const earnedFromThis = activity.assigned * (activity.rate || 0);
         const paidInThis =
             activity.type === "Payment" ? activity.amount || 0 : 0;
 
-        stats.earned += earnedFromThis;
-        stats.paid += paidInThis;
-        stats.monetaryBalance = stats.earned - stats.paid;
+        orderStats.earned += earnedFromThis;
+        orderStats.paid += paidInThis;
 
         return {
             ...activity,
             completed: stats.received[oId],
             due: Math.max(0, stats.assigned[oId] - stats.received[oId]),
             balance: stats.balance,
-            monetaryBalance: stats.monetaryBalance,
+            // Net Due is now per-order: earned - paid for this specific order
+            monetaryBalance: orderStats.earned - orderStats.paid,
             earnedFromThis,
             paidInThis,
         };
@@ -194,10 +245,21 @@ export const LedgerReport: React.FC = () => {
     const displayedLedger = processedLedger.filter((row) => {
         if (fromDate && row.date < fromDate) return false;
         if (toDate && row.date > toDate) return false;
-        // Status filter (logic: if any status other than 'all' is picked, match against original job status)
+
+        // Search by ID (Purchase ID or Work Order ID)
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesId = row.displayId?.toLowerCase().includes(query);
+            const matchesOrderId = String(row.orderId)
+                .toLowerCase()
+                .includes(query);
+            const matchesInvoice = row.details?.toLowerCase().includes(query);
+            if (!matchesId && !matchesOrderId && !matchesInvoice) return false;
+        }
+
+        // Status filter
         if (selectedStatus !== "all") {
-            const originalOrder = orders.find((o) => o.id === row.orderId);
-            const status = (originalOrder as any)?.status || "active"; // Khilai defaults to active
+            const status = orderStatuses[String(row.orderId)];
             if (status !== selectedStatus) return false;
         }
         return true;
@@ -212,8 +274,8 @@ export const LedgerReport: React.FC = () => {
         (s, a) => s + (a.earnedFromThis || 0),
         0,
     );
-    const totalMonetaryDue = Object.values(workerRunningStats).reduce(
-        (s, st) => s + st.monetaryBalance,
+    const totalMonetaryDue = Object.values(orderMonetaryStats).reduce(
+        (s, st) => s + Math.max(0, st.earned - st.paid),
         0,
     );
 
@@ -289,13 +351,34 @@ export const LedgerReport: React.FC = () => {
                     </label>
                     <select
                         value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        onChange={(e) => {
+                            setSelectedStatus(e.target.value);
+                            setCurrentPage(1);
+                        }}
                         className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-brand-500 focus:border-brand-500"
                     >
                         <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="completed">Completed</option>
+                        <option value="pending">Pending (Pieces Due)</option>
+                        <option value="completed">
+                            Completed (Payment Due)
+                        </option>
+                        <option value="paid">Paid (Fully Cleared)</option>
                     </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Search ID
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Search ID..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-brand-500 focus:border-brand-500 w-40"
+                    />
                 </div>
                 <button
                     onClick={() => {
@@ -303,6 +386,8 @@ export const LedgerReport: React.FC = () => {
                         setToDate("");
                         setSelectedWorkerId("");
                         setSelectedStatus("all");
+                        setSearchQuery("");
+                        setCurrentPage(1);
                     }}
                     className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
                 >
@@ -320,9 +405,6 @@ export const LedgerReport: React.FC = () => {
             <div className="min-h-screen bg-white text-black mx-auto p-6 print:p-0 print:max-w-none">
                 {/* Header */}
                 <div className="text-center border-b-2 border-black pb-4 mb-6">
-                    <h1 className="text-2xl font-bold uppercase">
-                        {COMPANY_NAME}
-                    </h1>
                     <h2 className="text-lg font-semibold mt-1">
                         Ledger Report
                     </h2>
@@ -439,207 +521,258 @@ export const LedgerReport: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {Object.entries(groupedLedger).map(
-                            ([orderId, activities]) => {
-                                const isExpanded = expandedOrders.has(orderId);
-                                const firstActivity = activities[0];
-                                const workerName = firstActivity.workerName;
-                                const orderTitle = firstActivity.details;
-                                const source = firstActivity.source;
-                                const wAssigned = activities.reduce(
-                                    (s, a) => s + a.assigned,
-                                    0,
-                                );
-                                const wReceived = activities.reduce(
-                                    (s, a) => s + a.received,
-                                    0,
-                                );
-                                const wPaid = activities
-                                    .filter((a) => a.type === "Payment")
-                                    .reduce((s, a) => s + (a.amount || 0), 0);
-                                const wEarned = activities.reduce(
-                                    (s, a) => s + (a.earnedFromThis || 0),
-                                    0,
-                                );
-                                const lastActivity =
-                                    activities.length > 0
-                                        ? activities[activities.length - 1]
-                                        : { balance: 0, monetaryBalance: 0 };
-                                const wBalance = lastActivity.balance;
-                                const wNetDue = lastActivity.monetaryBalance;
+                        {(() => {
+                            const entries = Object.entries(groupedLedger);
+                            const totalPages = Math.ceil(
+                                entries.length / pageSize,
+                            );
+                            const currentEntries = entries.slice(
+                                (currentPage - 1) * pageSize,
+                                currentPage * pageSize,
+                            );
 
-                                return (
-                                    <React.Fragment key={orderId}>
-                                        {/* Order Summary Row */}
-                                        <tr
-                                            onClick={() => toggleOrder(orderId)}
-                                            className="bg-gray-100/80 cursor-pointer hover:bg-gray-200 transition-colors border-y border-black"
-                                        >
-                                            <td
-                                                colSpan={4}
-                                                className="px-4 py-3 border-x border-black/10"
+                            return currentEntries.map(
+                                ([orderId, activities]) => {
+                                    const isExpanded =
+                                        expandedOrders.has(orderId);
+                                    const firstActivity = activities[0];
+                                    const workerName = firstActivity.workerName;
+                                    const orderTitle = firstActivity.details;
+                                    const source = firstActivity.source;
+                                    const wAssigned = activities.reduce(
+                                        (s, a) => s + a.assigned,
+                                        0,
+                                    );
+                                    const wReceived = activities.reduce(
+                                        (s, a) => s + a.received,
+                                        0,
+                                    );
+                                    const wPaid = activities
+                                        .filter((a) => a.type === "Payment")
+                                        .reduce(
+                                            (s, a) => s + (a.amount || 0),
+                                            0,
+                                        );
+                                    const wEarned = activities.reduce(
+                                        (s, a) => s + (a.earnedFromThis || 0),
+                                        0,
+                                    );
+                                    const lastActivity =
+                                        activities.length > 0
+                                            ? activities[activities.length - 1]
+                                            : {
+                                                  balance: 0,
+                                                  monetaryBalance: 0,
+                                              };
+                                    const wBalance = lastActivity.balance;
+                                    const wNetDue =
+                                        lastActivity.monetaryBalance;
+
+                                    return (
+                                        <React.Fragment key={orderId}>
+                                            {/* Order Summary Row */}
+                                            <tr
+                                                onClick={() =>
+                                                    toggleOrder(orderId)
+                                                }
+                                                className="bg-gray-100/80 cursor-pointer hover:bg-gray-200 transition-colors border-y border-black"
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    {isExpanded ? (
-                                                        <ChevronDown className="w-4 h-4 text-brand-600" />
-                                                    ) : (
-                                                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                                                    )}
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center">
-                                                            <span className="text-[10px] font-black text-brand-600">
-                                                                {source ===
-                                                                "Khilai"
-                                                                    ? "K"
-                                                                    : "W"}
-                                                            </span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="font-black text-xs uppercase tracking-wider">
-                                                                {orderTitle}
-                                                            </span>
-                                                            <p className="text-[9px] text-gray-500 font-bold">
-                                                                Worker:{" "}
-                                                                {workerName} |{" "}
-                                                                {
-                                                                    activities.length
-                                                                }{" "}
-                                                                entries
-                                                            </p>
+                                                <td
+                                                    colSpan={4}
+                                                    className="px-4 py-3 border-x border-black/10"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        {isExpanded ? (
+                                                            <ChevronDown className="w-4 h-4 text-brand-600" />
+                                                        ) : (
+                                                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center">
+                                                                <span className="text-[10px] font-black text-brand-600">
+                                                                    {source ===
+                                                                    "Khilai"
+                                                                        ? "K"
+                                                                        : "W"}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-black text-xs uppercase tracking-wider">
+                                                                    {orderTitle}
+                                                                </span>
+                                                                <p className="text-[9px] text-gray-500 font-bold">
+                                                                    Worker:{" "}
+                                                                    {workerName}{" "}
+                                                                    |{" "}
+                                                                    {
+                                                                        activities.length
+                                                                    }{" "}
+                                                                    entries
+                                                                </p>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            {/* Summary Row Monetary Stats */}
-                                            <td className="px-2 py-3 text-center border-x border-black/10 bg-amber-50/20">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[8px] text-gray-400 uppercase font-black">
-                                                        Earned
-                                                    </span>
-                                                    <span className="font-black text-amber-900">
-                                                        ₹
-                                                        {formatNumber(wEarned)}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-2 py-3 text-center font-black text-gray-900 border-x border-black/10">
-                                                {wAssigned > 0
-                                                    ? `${formatNumber(wAssigned)} pcs`
-                                                    : "—"}
-                                            </td>
-                                            <td className="px-2 py-3 text-center font-black text-emerald-800 border-x border-black/10 bg-emerald-50/30">
-                                                <div className="flex flex-col gap-0.5">
-                                                    {wReceived > 0 && (
-                                                        <span className="text-emerald-700">
-                                                            +{formatNumber(wReceived)} pcs
+                                                </td>
+                                                {/* Summary Row Monetary Stats */}
+                                                <td className="px-2 py-3 text-center border-x border-black/10 bg-amber-50/20">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[8px] text-gray-400 uppercase font-black">
+                                                            Earned
                                                         </span>
-                                                    )}
-                                                    {wPaid > 0 && (
-                                                        <span className="text-purple-700">
-                                                            ₹{formatNumber(wPaid)} Paid
+                                                        <span className="font-black text-amber-900">
+                                                            ₹
+                                                            {formatNumber(
+                                                                wEarned,
+                                                            )}
                                                         </span>
-                                                    )}
-                                                    {wReceived === 0 &&
-                                                        wPaid === 0 &&
-                                                        "—"}
-                                                </div>
-                                            </td>
-                                            <td className="px-2 py-3 text-center border-x border-black/10 text-gray-400">
-                                                {formatNumber(wReceived)}
-                                            </td>
-                                            <td className="px-2 py-3 text-center border-x border-black/10 text-red-600 font-bold">
-                                                {formatNumber(Math.max(
-                                                    0,
-                                                    wAssigned - wReceived,
-                                                ))}
-                                            </td>
-                                            <td
-                                                className={`px-2 py-3 text-right font-black border-x border-black/10 bg-gray-50/50 ${wBalance < 0 ? "text-red-700" : wBalance > 0 ? "text-emerald-700" : "text-gray-900"}`}
-                                            >
-                                                {formatNumber(wBalance)} pcs
-                                            </td>
-                                            <td className="px-2 py-3 text-right font-black border-x border-black/10 bg-blue-50/50 text-blue-800">
-                                                ₹{formatNumber(wNetDue)}
-                                            </td>
-                                        </tr>
-
-                                        {/* Individual Transaction Rows (Visible when expanded) */}
-                                        {isExpanded &&
-                                            activities.map((row, idx) => (
-                                                <tr
-                                                    key={`${row.type}-${row.id}-${idx}`}
-                                                    className={`hover:bg-gray-50 transition-colors animate-in slide-in-from-top-1 duration-200 ${row.type === "Assignment" ? "bg-gray-50/50" : row.type === "Payment" ? "bg-purple-50/10" : "bg-white"}`}
-                                                >
-                                                    <td className="border border-black/10 px-2 py-1.5 font-mono text-gray-400">
-                                                        {row.displayId}
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5 font-medium">
-                                                        {row.date}
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5">
-                                                        <span
-                                                            className={`text-[8px] font-black uppercase px-1 py-0 rounded w-fit ${
-                                                                row.type ===
-                                                                "Assignment"
-                                                                    ? "bg-blue-100 text-blue-700"
-                                                                    : row.type ===
-                                                                        "Payment"
-                                                                      ? "bg-purple-100 text-purple-700"
-                                                                      : "bg-emerald-100 text-emerald-700"
-                                                            }`}
-                                                        >
-                                                            {row.type}
-                                                        </span>
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5 text-gray-600 italic">
-                                                        {row.details}
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5 text-center text-gray-400 font-bold">
-                                                        {row.rate
-                                                            ? `₹${formatNumber(row.rate)}`
-                                                            : "—"}
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5 text-center font-bold">
-                                                        {row.assigned > 0
-                                                            ? `${formatNumber(row.assigned)} pcs`
-                                                            : "—"}
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5 text-center font-bold">
-                                                        {row.received > 0 ? (
-                                                            <span className="text-emerald-600">
-                                                                +{formatNumber(row.received)}{" "}
+                                                    </div>
+                                                </td>
+                                                <td className="px-2 py-3 text-center font-black text-gray-900 border-x border-black/10">
+                                                    {wAssigned > 0
+                                                        ? `${formatNumber(wAssigned)} pcs`
+                                                        : "—"}
+                                                </td>
+                                                <td className="px-2 py-3 text-center font-black text-emerald-800 border-x border-black/10 bg-emerald-50/30">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        {wReceived > 0 && (
+                                                            <span className="text-emerald-700">
+                                                                +
+                                                                {formatNumber(
+                                                                    wReceived,
+                                                                )}{" "}
                                                                 pcs
                                                             </span>
-                                                        ) : row.type ===
-                                                          "Payment" ? (
-                                                            <span className="text-purple-700 font-black">
-                                                                ₹{formatNumber(row.amount)}
-                                                            </span>
-                                                        ) : (
-                                                            "—"
                                                         )}
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5 text-center text-gray-400">
-                                                        {formatNumber(row.completed)}
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5 text-center text-red-600 font-bold">
-                                                        {formatNumber(row.due)}
-                                                    </td>
-                                                    <td
-                                                        className={`border border-black/10 px-2 py-1.5 text-right font-bold bg-gray-50/30 ${row.balance < 0 ? "text-red-700" : row.balance > 0 ? "text-emerald-700" : "text-gray-900"}`}
+                                                        {wPaid > 0 && (
+                                                            <span className="text-purple-700">
+                                                                ₹
+                                                                {formatNumber(
+                                                                    wPaid,
+                                                                )}{" "}
+                                                                Paid
+                                                            </span>
+                                                        )}
+                                                        {wReceived === 0 &&
+                                                            wPaid === 0 &&
+                                                            "—"}
+                                                    </div>
+                                                </td>
+                                                <td className="px-2 py-3 text-center border-x border-black/10 text-gray-400">
+                                                    {formatNumber(wReceived)}
+                                                </td>
+                                                <td className="px-2 py-3 text-center border-x border-black/10 text-red-600 font-bold">
+                                                    {formatNumber(
+                                                        Math.max(
+                                                            0,
+                                                            wAssigned -
+                                                                wReceived,
+                                                        ),
+                                                    )}
+                                                </td>
+                                                <td
+                                                    className={`px-2 py-3 text-right font-black border-x border-black/10 bg-gray-50/50 ${wBalance < 0 ? "text-red-700" : wBalance > 0 ? "text-emerald-700" : "text-gray-900"}`}
+                                                >
+                                                    {formatNumber(wBalance)} pcs
+                                                </td>
+                                                <td className="px-2 py-3 text-right font-black border-x border-black/10 bg-blue-50/50 text-blue-800">
+                                                    ₹{formatNumber(wNetDue)}
+                                                </td>
+                                            </tr>
+
+                                            {/* Individual Transaction Rows (Visible when expanded) */}
+                                            {isExpanded &&
+                                                activities.map((row, idx) => (
+                                                    <tr
+                                                        key={`${row.type}-${row.id}-${idx}`}
+                                                        className={`hover:bg-gray-50 transition-colors animate-in slide-in-from-top-1 duration-200 ${row.type === "Assignment" ? "bg-gray-50/50" : row.type === "Payment" ? "bg-purple-50/10" : "bg-white"}`}
                                                     >
-                                                        {formatNumber(row.balance)} pcs
-                                                    </td>
-                                                    <td className="border border-black/10 px-2 py-1.5 text-right font-black bg-blue-50/20 text-blue-900">
-                                                        ₹
-                                                        {formatNumber(row.monetaryBalance)}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                    </React.Fragment>
-                                );
-                            },
-                        )}
+                                                        <td className="border border-black/10 px-2 py-1.5 font-mono text-gray-400">
+                                                            {row.displayId}
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5 font-medium">
+                                                            {row.date}
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5">
+                                                            <span
+                                                                className={`text-[8px] font-black uppercase px-1 py-0 rounded w-fit ${
+                                                                    row.type ===
+                                                                    "Assignment"
+                                                                        ? "bg-blue-100 text-blue-700"
+                                                                        : row.type ===
+                                                                            "Payment"
+                                                                          ? "bg-purple-100 text-purple-700"
+                                                                          : "bg-emerald-100 text-emerald-700"
+                                                                }`}
+                                                            >
+                                                                {row.type}
+                                                            </span>
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5 text-gray-600 italic">
+                                                            {row.details}
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5 text-center text-gray-400 font-bold">
+                                                            {row.rate
+                                                                ? `₹${formatNumber(row.rate)}`
+                                                                : "—"}
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5 text-center font-bold">
+                                                            {row.assigned > 0
+                                                                ? `${formatNumber(row.assigned)} pcs`
+                                                                : "—"}
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5 text-center font-bold">
+                                                            {row.received >
+                                                            0 ? (
+                                                                <span className="text-emerald-600">
+                                                                    +
+                                                                    {formatNumber(
+                                                                        row.received,
+                                                                    )}{" "}
+                                                                    pcs
+                                                                </span>
+                                                            ) : row.type ===
+                                                              "Payment" ? (
+                                                                <span className="text-purple-700 font-black">
+                                                                    ₹
+                                                                    {formatNumber(
+                                                                        row.amount,
+                                                                    )}
+                                                                </span>
+                                                            ) : (
+                                                                "—"
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5 text-center text-gray-400">
+                                                            {formatNumber(
+                                                                row.completed,
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5 text-center text-red-600 font-bold">
+                                                            {formatNumber(
+                                                                row.due,
+                                                            )}
+                                                        </td>
+                                                        <td
+                                                            className={`border border-black/10 px-2 py-1.5 text-right font-bold bg-gray-50/30 ${row.balance < 0 ? "text-red-700" : row.balance > 0 ? "text-emerald-700" : "text-gray-900"}`}
+                                                        >
+                                                            {formatNumber(
+                                                                row.balance,
+                                                            )}{" "}
+                                                            pcs
+                                                        </td>
+                                                        <td className="border border-black/10 px-2 py-1.5 text-right font-black bg-blue-50/20 text-blue-900">
+                                                            ₹
+                                                            {formatNumber(
+                                                                row.monetaryBalance,
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                        </React.Fragment>
+                                    );
+                                },
+                            );
+                        })()}
                         {displayedLedger.length === 0 && (
                             <tr>
                                 <td
@@ -678,6 +811,107 @@ export const LedgerReport: React.FC = () => {
                         </tr>
                     </tfoot>
                 </table>
+
+                {/* Pagination Controls */}
+                {!loading && displayedLedger.length > 0 && (
+                    <div className="mt-6 flex items-center justify-between no-print py-4 border-t border-gray-100">
+                        <div className="text-sm text-gray-500 font-medium">
+                            Showing{" "}
+                            <span className="font-bold text-gray-900">
+                                {Math.min(
+                                    (currentPage - 1) * pageSize + 1,
+                                    Object.keys(groupedLedger).length,
+                                )}
+                            </span>{" "}
+                            to{" "}
+                            <span className="font-bold text-gray-900">
+                                {Math.min(
+                                    currentPage * pageSize,
+                                    Object.keys(groupedLedger).length,
+                                )}
+                            </span>{" "}
+                            of{" "}
+                            <span className="font-bold text-gray-900">
+                                {Object.keys(groupedLedger).length}
+                            </span>{" "}
+                            orders
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() =>
+                                    setCurrentPage((p) => Math.max(1, p - 1))
+                                }
+                                disabled={currentPage === 1}
+                                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                            >
+                                Previous
+                            </button>
+                            {Array.from(
+                                {
+                                    length: Math.ceil(
+                                        Object.keys(groupedLedger).length /
+                                            pageSize,
+                                    ),
+                                },
+                                (_, i) => i + 1,
+                            )
+                                .filter((p) => {
+                                    const total = Math.ceil(
+                                        Object.keys(groupedLedger).length /
+                                            pageSize,
+                                    );
+                                    if (total <= 7) return true;
+                                    return (
+                                        p === 1 ||
+                                        p === total ||
+                                        Math.abs(p - currentPage) <= 1
+                                    );
+                                })
+                                .map((page, i, arr) => (
+                                    <React.Fragment key={page}>
+                                        {i > 0 && arr[i - 1] !== page - 1 && (
+                                            <span className="px-2 self-center text-gray-400">
+                                                ...
+                                            </span>
+                                        )}
+                                        <button
+                                            onClick={() => setCurrentPage(page)}
+                                            className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
+                                                currentPage === page
+                                                    ? "bg-brand-600 text-white shadow-lg shadow-brand-200 scale-110"
+                                                    : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                                            }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    </React.Fragment>
+                                ))}
+                            <button
+                                onClick={() =>
+                                    setCurrentPage((p) =>
+                                        Math.min(
+                                            Math.ceil(
+                                                Object.keys(groupedLedger)
+                                                    .length / pageSize,
+                                            ),
+                                            p + 1,
+                                        ),
+                                    )
+                                }
+                                disabled={
+                                    currentPage ===
+                                    Math.ceil(
+                                        Object.keys(groupedLedger).length /
+                                            pageSize,
+                                    )
+                                }
+                                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

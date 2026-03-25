@@ -43,6 +43,9 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
         useState<any>(null);
     const [isTrashView, setIsTrashView] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [activeTab, setActiveTab] = useState<
+        "all" | "pending" | "completed" | "paid"
+    >("pending");
 
     const fetchData = async () => {
         try {
@@ -183,6 +186,37 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                 )}
             </div>
 
+            {!isTrashView && (
+                <div className="flex gap-2 p-1 bg-gray-100/50 rounded-xl w-fit border border-gray-200 shadow-sm">
+                    {[
+                        { id: "all", label: "All" },
+                        { id: "pending", label: "Pending" },
+                        { id: "completed", label: "Completed" },
+                        { id: "paid", label: "Paid" },
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() =>
+                                setActiveTab(
+                                    tab.id as
+                                        | "all"
+                                        | "pending"
+                                        | "completed"
+                                        | "paid",
+                                )
+                            }
+                            className={`px-8 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
+                                activeTab === tab.id
+                                    ? "bg-white text-brand-600 shadow-md border border-gray-100 transform scale-105"
+                                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {selectedIds.length > 0 && (
                 <div className="bg-brand-600 text-white px-6 py-3 rounded-xl flex justify-between items-center shadow-lg animate-in slide-in-from-top-4 duration-300">
                     <span className="font-bold">
@@ -216,214 +250,312 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                 </div>
             )}
 
-            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 min-h-[500px] relative">
-                <div className="grid grid-cols-[40px_1.2fr_1fr_1fr_1.5fr_1fr_1fr_1fr_1fr_1.2fr_150px] bg-gray-50/50 border-b border-gray-200">
-                    <div className="px-4 py-3 flex items-center">
-                        <button
-                            onClick={toggleSelectAll}
-                            className="text-gray-400 hover:text-brand-600 transition-colors"
-                        >
-                            {selectedIds.length === purchases.length &&
-                            purchases.length > 0 ? (
-                                <CheckSquare className="w-5 h-5 text-brand-600" />
-                            ) : (
-                                <Square className="w-5 h-5" />
-                            )}
-                        </button>
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider">
-                        Date
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider">
-                        Khilai ID
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider">
-                        Invoice
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider">
-                        Worker
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-gray-600 uppercase tracking-wider">
-                        Rate
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider">
-                        Total Pcs
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-emerald-600 uppercase tracking-wider">
-                        Received
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-red-600 uppercase tracking-wider">
-                        Due
-                    </div>
-                    <div className="px-6 py-3 text-left text-xs font-black text-blue-600 uppercase tracking-wider">
-                        Due (₹)
-                    </div>
-                    <div className="px-6 py-3 text-right text-xs font-black text-gray-400 uppercase tracking-wider">
-                        Actions
-                    </div>
-                </div>
-                {purchases.length > 0 ? (
-                    <div className="overflow-y-auto" style={{ height: 440 }}>
-                        {purchases.map((p) => {
-                            const received =
-                                p.vouchers?.reduce(
-                                    (sum, v) => sum + Number(v.total_received),
-                                    0,
-                                ) || 0;
-                            const due = (p.total_pieces || 0) - received;
-                            const isSelected = selectedIds.includes(
-                                String(p.id),
-                            );
-                            return (
-                                <div
-                                    key={p.id}
-                                    className={`grid grid-cols-[40px_1.2fr_1fr_1fr_1.5fr_1fr_1fr_1fr_1fr_1.2fr_150px] border-b border-gray-100 items-center hover:bg-gray-50 transition-colors ${isSelected ? "bg-brand-50/30" : ""}`}
-                                >
-                                    <div className="px-4 py-4 flex items-center">
-                                        <button
-                                            onClick={() =>
-                                                toggleSelect(String(p.id))
-                                            }
-                                            className="text-gray-400 hover:text-brand-600 transition-colors"
-                                        >
-                                            {isSelected ? (
-                                                <CheckSquare className="w-5 h-5 text-brand-600" />
-                                            ) : (
-                                                <Square className="w-5 h-5" />
-                                            )}
-                                        </button>
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                                        {p.date}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm font-bold text-brand-600">
-                                        #{String(p.id).padStart(4, "0")}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                                        {p.invoice_no}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
-                                        {p.worker?.name || "Unknown"}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                                        {p.price_per_pc
-                                            ? `₹${formatNumber(p.price_per_pc)}`
-                                            : "—"}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold">
-                                        {formatNumber(p.total_pieces)}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-black">
-                                        {formatNumber(received)}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-black">
-                                        {formatNumber(due)}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-black">
-                                        ₹{formatNumber(due * (p.price_per_pc || 0))}
-                                    </div>
-                                    <div className="px-6 py-4 whitespace-nowrap flex justify-end gap-3 text-end text-sm font-medium">
-                                        {isTrashView ? (
-                                            <>
-                                                <button
-                                                    onClick={() =>
-                                                        handleRestore(p.id)
-                                                    }
-                                                    className="text-emerald-600 hover:text-emerald-900 font-bold flex items-center gap-1"
-                                                    title="Restore"
-                                                >
-                                                    <RotateCcw className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        handleForceDelete(p.id)
-                                                    }
-                                                    className="text-red-600 hover:text-red-900 font-bold flex items-center gap-1"
-                                                    title="Delete Permanently"
-                                                >
-                                                    <Trash className="w-4 h-4" />
-                                                </button>
-                                            </>
+            <div className="bg-white shadow-xl rounded-2xl overflow-x-auto border border-gray-100 max-h-[700px] relative">
+                {purchases.filter((p) => {
+                    if (isTrashView || activeTab === "all") return true;
+
+                    const received =
+                        p.vouchers?.reduce(
+                            (sum, v) => sum + Number(v.total_received),
+                            0,
+                        ) || 0;
+                    const duePcs = (p.total_pieces || 0) - received;
+
+                    const paymentVouchers = (p as any).payment_vouchers || (p as any).paymentVouchers || [];
+                    const totalPaid = paymentVouchers.reduce(
+                        (sum: number, v: any) => sum + Number(v.price || 0),
+                        0,
+                    );
+                    const totalAmount =
+                        Number(p.total_pieces || 0) * Number(p.price_per_pc || 0);
+                    const monetaryDue = totalAmount - totalPaid;
+
+                    if (activeTab === "pending") return duePcs > 0;
+                    if (activeTab === "completed")
+                        return duePcs <= 0 && monetaryDue > 0.1; // Small threshold for float
+                    if (activeTab === "paid") return monetaryDue <= 0.1;
+
+                    return true;
+                }).length > 0 ? (
+                    <table className="w-full text-left border-collapse min-w-[1000px]">
+                        <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100 text-sm text-gray-500 uppercase sticky top-0 z-10 shadow-sm">
+                                <th className="p-4 w-12 font-medium">
+                                    <button
+                                        onClick={toggleSelectAll}
+                                        className="text-gray-400 hover:text-brand-600 transition-colors"
+                                    >
+                                        {selectedIds.length === purchases.length &&
+                                        purchases.length > 0 ? (
+                                            <CheckSquare className="w-5 h-5 text-brand-600" />
                                         ) : (
-                                            <>
-                                                <button
-                                                    onClick={() =>
-                                                        setSelectedPurchaseDetails(
-                                                            p,
-                                                        )
-                                                    }
-                                                    className="text-gray-600 hover:text-gray-900 flex items-center gap-1 font-bold"
-                                                    title="Details"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setVoucherInitialData({
-                                                            type: "khilai",
-                                                            id: p.id,
-                                                            totalDue:
-                                                                due > 0
-                                                                    ? due
-                                                                    : 0,
-                                                            description: `Payment for Khilai Inv #${p.invoice_no}`,
-                                                        });
-                                                        setIsVoucherModalOpen(
-                                                            true,
-                                                        );
-                                                    }}
-                                                    className="text-emerald-600 hover:text-emerald-900 flex items-center gap-1 font-bold"
-                                                    title="Voucher"
-                                                >
-                                                    <CreditCard className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        onEditClick(p)
-                                                    }
-                                                    className="text-brand-600 hover:text-brand-900 flex items-center gap-1 font-bold"
-                                                    title="Edit"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const url = `#/purchase/${p.id}/print`;
-                                                        window.open(
-                                                            url,
-                                                            "PrintWindow",
-                                                            "width=900,height=800,scrollbars=yes",
-                                                        );
-                                                    }}
-                                                    className="text-brand-600 hover:text-brand-900 flex items-center justify-end gap-1 font-bold"
-                                                    title="Print"
-                                                >
-                                                    <Printer className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        handleDelete(p.id)
-                                                    }
-                                                    className="text-red-400 hover:text-red-600 font-bold flex items-center gap-1"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </>
+                                            <Square className="w-5 h-5" />
                                         )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                    </button>
+                                </th>
+                                <th className="p-4 font-medium">Date</th>
+                                <th className="p-4 font-medium">Khilai ID</th>
+                                <th className="p-4 font-medium">Invoice</th>
+                                <th className="p-4 font-medium">Worker</th>
+                                <th className="p-4 font-medium">Rate</th>
+                                <th className="p-4 font-medium">Total Pcs</th>
+                                <th className="p-4 font-medium text-emerald-600">Received</th>
+                                <th className="p-4 font-medium text-red-600">Due</th>
+                                <th className="p-4 font-medium text-blue-600">Due (₹)</th>
+                                <th className="p-4 font-medium text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {purchases
+                                .filter((p) => {
+                                    if (isTrashView || activeTab === "all")
+                                        return true;
+
+                                    const received =
+                                        p.vouchers?.reduce(
+                                            (sum, v) =>
+                                                sum + Number(v.total_received),
+                                            0,
+                                        ) || 0;
+                                    const duePcs =
+                                        (p.total_pieces || 0) - received;
+
+                                    const paymentVouchers = (p as any).payment_vouchers || (p as any).paymentVouchers || [];
+                                    const totalPaid = paymentVouchers.reduce(
+                                        (sum: number, v: any) =>
+                                            sum + Number(v.price || 0),
+                                        0,
+                                    );
+                                    const totalAmount =
+                                        Number(p.total_pieces || 0) *
+                                        Number(p.price_per_pc || 0);
+                                    const monetaryDue = totalAmount - totalPaid;
+
+                                    if (activeTab === "pending")
+                                        return duePcs > 0;
+                                    if (activeTab === "completed")
+                                        return duePcs <= 0 && monetaryDue > 0.1;
+                                    if (activeTab === "paid")
+                                        return monetaryDue <= 0.1;
+
+                                    return true;
+                                })
+                                .map((p) => {
+                                const received =
+                                    p.vouchers?.reduce(
+                                        (sum, v) => sum + Number(v.total_received),
+                                        0,
+                                    ) || 0;
+                                const due = (p.total_pieces || 0) - received;
+                                
+                                const paymentVouchers = (p as any).payment_vouchers || (p as any).paymentVouchers || [];
+                                const totalPaid = paymentVouchers.reduce(
+                                    (sum: number, v: any) => sum + Number(v.price || 0),
+                                    0
+                                );
+                                const totalAmount = Number(p.total_pieces || 0) * Number(p.price_per_pc || 0);
+                                const monetaryDue = totalAmount - totalPaid;
+
+                                const isSelected = selectedIds.includes(
+                                    String(p.id),
+                                );
+                                return (
+                                    <tr
+                                        key={p.id}
+                                        className={`hover:bg-gray-50 transition-colors ${isSelected ? "bg-brand-50/30" : "bg-white"}`}
+                                    >
+                                        <td className="p-4 align-middle">
+                                            <button
+                                                onClick={() =>
+                                                    toggleSelect(String(p.id))
+                                                }
+                                                className="text-gray-400 hover:text-brand-600 transition-colors"
+                                            >
+                                                {isSelected ? (
+                                                    <CheckSquare className="w-5 h-5 text-brand-600" />
+                                                ) : (
+                                                    <Square className="w-5 h-5" />
+                                                )}
+                                            </button>
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm text-gray-600 font-medium">
+                                            {p.date}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm font-bold text-brand-600">
+                                            #{String(p.id).padStart(4, "0")}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm text-gray-900 font-bold">
+                                            {p.invoice_no}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm text-gray-500 font-medium">
+                                            {p.worker?.name || "Unknown"}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm text-gray-900 font-bold">
+                                            {p.price_per_pc
+                                                ? `₹${formatNumber(p.price_per_pc)}`
+                                                : "—"}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm text-gray-500 font-bold">
+                                            {formatNumber(p.total_pieces)}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm text-emerald-600 font-black">
+                                            {formatNumber(received)}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm text-red-600 font-black">
+                                            {formatNumber(due)}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-sm text-blue-600 font-black">
+                                            ₹{formatNumber(monetaryDue)}
+                                        </td>
+                                        <td className="p-4 align-middle whitespace-nowrap text-right">
+                                            <div className="flex justify-end gap-2">
+                                                {isTrashView ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleRestore(p.id)
+                                                            }
+                                                            className="p-2 text-emerald-600 hover:text-emerald-800"
+                                                            title="Restore"
+                                                        >
+                                                            <RotateCcw className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleForceDelete(p.id)
+                                                            }
+                                                            className="p-2 text-red-600 hover:text-red-800"
+                                                            title="Delete Permanently"
+                                                        >
+                                                            <Trash className="w-5 h-5" />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={() =>
+                                                                setSelectedPurchaseDetails(
+                                                                    p,
+                                                                )
+                                                            }
+                                                            className="p-2 text-gray-600 hover:text-gray-800"
+                                                            title="Details"
+                                                        >
+                                                            <Eye className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setVoucherInitialData({
+                                                                    type: "khilai",
+                                                                    id: p.id,
+                                                                    totalDue:
+                                                                        due > 0
+                                                                            ? due
+                                                                            : 0,
+                                                                    description: `Payment for Khilai Inv #${p.invoice_no}`,
+                                                                });
+                                                                setIsVoucherModalOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            className="p-2 text-emerald-600 hover:text-emerald-800"
+                                                            title="Voucher"
+                                                        >
+                                                            <CreditCard className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                 const paymentVouchers = (p as any).payment_vouchers || (p as any).paymentVouchers || [];
+                                                                 const totalPaid = paymentVouchers.reduce((s: number, v: any) => s + Number(v.price || 0), 0);
+                                                                 const totalAmount = Number(p.total_pieces || 0) * Number(p.price_per_pc || 0);
+                                                                 const balanceDue = Math.max(0, totalAmount - totalPaid);
+                                                                setPaymentVoucherInitialData(
+                                                                    {
+                                                                        type: "khilai",
+                                                                        id: p.id,
+                                                                         totalDue: balanceDue,
+                                                                         description: `Payment for Khilai Inv #${p.invoice_no}`,
+                                                                    },
+                                                                );
+                                                                setIsPaymentVoucherModalOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            className="p-2 text-blue-500 hover:text-blue-700"
+                                                            title="Payment Voucher"
+                                                        >
+                                                            <svg
+                                                                className="w-5 h-5"
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                width="24"
+                                                                height="24"
+                                                                viewBox="0 0 24 24"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                strokeWidth="2"
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                            >
+                                                                <line
+                                                                    x1="12"
+                                                                    y1="1"
+                                                                    x2="12"
+                                                                    y2="23"
+                                                                ></line>
+                                                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                onEditClick(p)
+                                                            }
+                                                            className="p-2 text-brand-600 hover:text-brand-800"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const url = `#/purchase/${p.id}/print`;
+                                                                window.open(
+                                                                    url,
+                                                                    "PrintWindow",
+                                                                    "width=900,height=800,scrollbars=yes",
+                                                                );
+                                                            }}
+                                                            className="p-2 text-brand-600 hover:text-brand-800"
+                                                            title="Print"
+                                                        >
+                                                            <Printer className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleDelete(p.id)
+                                                            }
+                                                            className="p-2 text-red-400 hover:text-red-600"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-[400px] text-gray-500">
                         <Trash2 className="w-16 h-16 text-gray-200 mb-4" />
                         <p className="text-xl font-medium">No records found</p>
                         <p className="text-sm">
-                            {isTrashView
-                                ? "Your trash is empty"
-                                : "Start by creating a new Khilai entry"}
+                                {isTrashView
+                                    ? "Your trash is empty"
+                                    : activeTab !== "all"
+                                      ? `No ${activeTab} Khilai entries found`
+                                      : "Start by creating a new Khilai entry"}
                         </p>
                     </div>
                 )}
@@ -524,21 +656,41 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                                 )}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between text-sm border-t-2 border-brand-200 pt-2 mt-2">
-                                            <span className="text-brand-800 uppercase text-[10px] font-black">
+                                        <div className="flex justify-between text-sm border-t border-brand-100 pt-1">
+                                            <span className="text-gray-600 uppercase text-[10px] font-bold">
                                                 Total Amount:
                                             </span>
+                                            <span className="font-bold">
+                                                ₹{formatNumber(
+                                                    Number(selectedPurchaseDetails.total_pieces || 0) * 
+                                                    Number(selectedPurchaseDetails.price_per_pc || 0)
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between text-sm border-t border-brand-100 pt-1">
+                                            <span className="text-emerald-600 uppercase text-[10px] font-bold">
+                                                Total Paid:
+                                            </span>
+                                            <span className="font-bold text-emerald-600">
+                                                ₹{formatNumber(
+                                                    ((selectedPurchaseDetails as any).payment_vouchers || (selectedPurchaseDetails as any).paymentVouchers || []).reduce(
+                                                        (sum: number, v: any) => sum + Number(v.price || 0),
+                                                        0
+                                                    )
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between text-sm border-t-2 border-brand-200 pt-2 mt-2">
+                                            <span className="text-brand-800 uppercase text-[10px] font-black">
+                                                Balance Due:
+                                            </span>
                                             <span className="font-black text-brand-900 text-lg">
-                                                ₹
-                                                {formatNumber(
-                                                    Number(
-                                                        selectedPurchaseDetails.total_pieces ||
-                                                            0,
-                                                    ) *
-                                                        Number(
-                                                            selectedPurchaseDetails.price_per_pc ||
-                                                                0,
-                                                        ),
+                                                ₹{formatNumber(
+                                                    (Number(selectedPurchaseDetails.total_pieces || 0) * Number(selectedPurchaseDetails.price_per_pc || 0)) -
+                                                    ((selectedPurchaseDetails as any).payment_vouchers || (selectedPurchaseDetails as any).paymentVouchers || []).reduce(
+                                                        (sum: number, v: any) => sum + Number(v.price || 0),
+                                                        0
+                                                    )
                                                 )}
                                             </span>
                                         </div>
@@ -737,8 +889,8 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                         </div>
                                     </div>
                                 )}
-                            {(selectedPurchaseDetails as any).paymentVouchers &&
-                                (selectedPurchaseDetails as any).paymentVouchers
+                            {(selectedPurchaseDetails as any).payment_vouchers &&
+                                (selectedPurchaseDetails as any).payment_vouchers
                                     .length > 0 && (
                                     <div className="space-y-3 pt-4 border-t border-dashed">
                                         <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -767,7 +919,7 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                         <div className="bg-blue-50/30 rounded-xl border border-blue-100 divide-y divide-blue-100">
                                             {(
                                                 selectedPurchaseDetails as any
-                                            ).paymentVouchers.map((v: any) => (
+                                            ).payment_vouchers.map((v: any) => (
                                                 <div
                                                     key={v.id}
                                                     className="p-3 flex justify-between items-center hover:bg-blue-50/50 transition-colors"
@@ -836,10 +988,23 @@ export const PurchaseList: React.FC<PurchaseListProps> = ({
                                 </button>
                                 <button
                                     onClick={() => {
+                                        const totalReceived =
+                                            selectedPurchaseDetails.vouchers?.reduce(
+                                                (sum, v) =>
+                                                    sum +
+                                                    Number(v.total_received),
+                                                0,
+                                            ) || 0;
+                                        const totalDuePcs =
+                                            (selectedPurchaseDetails.total_pieces ||
+                                                0) - totalReceived;
                                         setPaymentVoucherInitialData({
                                             type: "khilai",
                                             id: selectedPurchaseDetails.id,
-                                            totalDue: 0,
+                                            totalDue:
+                                                totalDuePcs *
+                                                (selectedPurchaseDetails.price_per_pc ||
+                                                    0),
                                             description: `Payment for Khilai Inv #${selectedPurchaseDetails.invoice_no}`,
                                         });
                                         setIsPaymentVoucherModalOpen(true);

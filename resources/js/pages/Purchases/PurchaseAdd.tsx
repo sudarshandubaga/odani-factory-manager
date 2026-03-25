@@ -371,71 +371,68 @@ export const PurchaseAdd: React.FC<PurchaseAddProps> = ({
 
                 {itemType === "lot" ? (
                     <>
-                        <div className="border rounded-md overflow-hidden">
-                            <div className="grid grid-cols-7 bg-gray-100 p-2 text-xs font-bold text-gray-700 border-b">
-                                <div className="col-span-1">S. No.</div>
-                                <div className="col-span-1">Size (m)</div>
-                                <div className="col-span-1">Pat (Dec)</div>
-                                <div className="col-span-1">Pat (Round)</div>
-                                <div className="col-span-1">Final (Dec)</div>
-                                <div className="col-span-1">Final (Round)</div>
-                                <div className="col-span-1">Action</div>
-                            </div>
-                            <div className="h-[400px]">
-                                <div className="max-h-[400px] overflow-y-auto">
+                        <div className="border rounded-md overflow-hidden max-h-[500px] overflow-y-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-gray-100 sticky top-0 z-10">
+                                    <tr className="text-xs font-bold text-gray-700 border-b">
+                                        <th className="px-4 py-2 border-r">S. No.</th>
+                                        <th className="px-4 py-2">Size (m)</th>
+                                        <th className="px-4 py-2">Pat (Dec)</th>
+                                        <th className="px-4 py-2">Pat (Round)</th>
+                                        <th className="px-4 py-2">Final (Dec)</th>
+                                        <th className="px-4 py-2">Final (Round)</th>
+                                        <th className="px-4 py-2 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white">
                                     {items.map((item) => (
-                                        <div
+                                        <tr
                                             key={item.id}
-                                            className="grid grid-cols-7 p-2 border-b items-center text-sm hover:bg-gray-50 bg-white"
+                                            className="border-b text-sm hover:bg-gray-50 bg-white group"
                                         >
-                                            <div className="col-span-1 text-gray-500 pl-2">
+                                            <td className="px-4 py-2 text-gray-500 border-r font-mono">
                                                 {item.sNo}
-                                            </div>
-                                            <div className="col-span-1">
+                                            </td>
+                                            <td className="px-4 py-1">
                                                 <input
                                                     type="number"
-                                                    className="w-24 border rounded px-2 py-1 outline-none"
-                                                    value={
-                                                        item.sizeMeters || ""
-                                                    }
+                                                    className="w-24 border border-gray-200 rounded px-2 py-1 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                                                    value={item.sizeMeters || ""}
                                                     onChange={(e) =>
                                                         handleItemChange(
                                                             item.id,
                                                             "sizeMeters",
-                                                            parseFloat(
-                                                                e.target.value,
-                                                            ),
+                                                            parseFloat(e.target.value) || 0
                                                         )
                                                     }
                                                     placeholder="0"
                                                 />
-                                            </div>
-                                            <div className="col-span-1 text-gray-600">
+                                            </td>
+                                            <td className="px-4 py-2 text-gray-400">
                                                 {formatNumber(item.patRaw)}
-                                            </div>
-                                            <div className="col-span-1 font-medium">
+                                            </td>
+                                            <td className="px-4 py-2 font-medium text-gray-700">
                                                 {formatNumber(item.patRound)}
-                                            </div>
-                                            <div className="col-span-1 text-gray-600">
+                                            </td>
+                                            <td className="px-4 py-2 text-gray-400">
                                                 {formatNumber(item.piecesRaw)}
-                                            </div>
-                                            <div className="col-span-1 font-bold text-brand-700">
+                                            </td>
+                                            <td className="px-4 py-2 font-bold text-brand-700">
                                                 {formatNumber(item.piecesRound)}
-                                            </div>
-                                            <div className="col-span-1">
+                                            </td>
+                                            <td className="px-4 py-2 text-center">
                                                 <button
-                                                    onClick={() =>
-                                                        removeItemRow(item.id)
-                                                    }
-                                                    className="text-red-500 hover:text-red-700"
+                                                    onClick={() => removeItemRow(item.id)}
+                                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                                    title="Remove Row"
                                                 >
                                                     <Trash className="w-4 h-4" />
                                                 </button>
-                                            </div>
-                                        </div>
+                                            </td>
+                                        </tr>
                                     ))}
-                                </div>
-                            </div>
+                                </tbody>
+                            </table>
                         </div>
 
                         <div className="mt-4 flex gap-4">
